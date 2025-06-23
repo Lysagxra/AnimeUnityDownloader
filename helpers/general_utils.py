@@ -61,12 +61,13 @@ def create_download_directory(directory_name: str) -> str:
 
     try:
         Path(download_path).mkdir(parents=True, exist_ok=True)
-        return download_path
 
     except OSError as os_err:
         message = f"Error creating directory: {os_err}"
         logging.exception(message)
         sys.exit(1)
+
+    return download_path
 
 
 def clear_terminal() -> None:

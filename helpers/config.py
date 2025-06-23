@@ -15,6 +15,9 @@ CRAWLER_WORKERS = 8            # The maximum number of worker threads for crawli
 DOWNLOAD_WORKERS = 2           # The maximum number of worker threads for downloading
                                # tasks.
 
+# Regex pattern to extract download URL
+DOWNLOAD_LINK_PATTERN = r"window\.downloadUrl\s*=\s*'(https?:\/\/[^\s']+)'"
+
 # Constants for file sizes, expressed in bytes.
 KB = 1024
 MB = 1024 * KB

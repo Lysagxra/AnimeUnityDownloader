@@ -12,12 +12,11 @@ import random
 import re
 import sys
 from asyncio import Semaphore
-from typing import Optional
 from urllib.parse import urlparse
 
 import httpx
 
-from helpers.config import prepare_headers
+from helpers.config import DOWNLOAD_LINK_PATTERN, prepare_headers
 
 HEADERS = prepare_headers()
 
@@ -53,22 +52,22 @@ def validate_episode_range(
     if start_episode and end_episode:
         if start_episode > end_episode:
             log_and_exit("Start episode cannot be greater than end episode.")
+
         if end_episode > num_episodes:
             log_and_exit(f"End episode must be between 1 and {num_episodes}.")
 
 
-def episode_in_range(num: str, start: Optional[int], end: Optional[int]) -> bool:
+def episode_in_range(num: str, start: int | None, end: int | None) -> bool:
     """Check if episode number is within the specified range.
 
-    The range is intended to be inclusive.
-
-    If the episode number is impossible to compare as a float, it is arbitrarily
-    included (assuming that the range specification is used just to exclude, thus the
-    default is "all included").
+    The range is intended to be inclusive. If the episode number cannot be compared as
+    a float, it is included by default. This assumes that the range is primarily used to
+    exclude episodes, so the fallback behavior is to include everything unless
+    explicitly excluded.
     """
-
     try:
         n = float(num)
+
     except ValueError:
         return True
 
@@ -85,38 +84,35 @@ async def fetch_with_retries(
     retries: int = 4,
 ) -> dict | None:
     """Fetch data from a URL with retries on failure."""
-    async with semaphore:
-        async with httpx.AsyncClient() as client:
-            for attempt in range(retries):
-                try:
-                    response = await client.get(
-                        url,
-                        headers=headers,
-                        params=params,
-                        timeout=10,
-                    )
-                    response.raise_for_status()
-                    return response
+    async with semaphore, httpx.AsyncClient() as client:
+        for attempt in range(retries):
+            try:
+                response = await client.get(
+                    url,
+                    headers=headers,
+                    params=params,
+                    timeout=10,
+                )
+                response.raise_for_status()
+                return response
 
-                except httpx.HTTPStatusError:
-                    if attempt < retries - 1:
-                        delay = 2**attempt + random.uniform(0, 2)  # noqa: S311
-                        await asyncio.sleep(delay)
+            except httpx.HTTPStatusError:
+                if attempt < retries - 1:
+                    delay = 2**attempt + random.uniform(1, 2)  # noqa: S311
+                    await asyncio.sleep(delay)
 
-                except httpx.RequestError as req_err:
-                    message = f"Request failed for {url}: {req_err}"
-                    logging.exception(message)
-                    return None
+            except httpx.RequestError as req_err:
+                message = f"Request failed for {url}: {req_err}"
+                logging.exception(message)
+                return None
 
     return None
 
 
 def extract_download_link(script_items: list, video_url: str) -> str | None:
     """Extract the download URL from a list of script items."""
-    pattern = r"window\.downloadUrl\s*=\s*'(https?:\/\/[^\s']+)'"
-
     for item in script_items:
-        match = re.search(pattern, item.text)
+        match = re.search(DOWNLOAD_LINK_PATTERN, item.text)
         if match:
             return match.group(1)
 

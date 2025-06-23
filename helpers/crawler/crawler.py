@@ -13,10 +13,7 @@ from typing import TYPE_CHECKING
 
 import httpx
 
-from helpers.config import (
-    CRAWLER_WORKERS,
-    prepare_headers,
-)
+from helpers.config import CRAWLER_WORKERS, prepare_headers
 
 from .crawler_utils import (
     episode_in_range,
@@ -33,7 +30,7 @@ HEADERS = prepare_headers()
 
 
 class Crawler:
-    """class responsible for crawling an anime.
+    """Class responsible for crawling an anime.
 
     Extract episode IDs, generate embed URLs, and retrieve video URLs for a specified
     range of episodes.
@@ -70,11 +67,11 @@ class Crawler:
             if title_container is None:
                 logging.error("Anime title tag not found.")
 
-            return title_container.get_text().strip()
-
         except AttributeError as attr_err:
             message = f"Error extracting anime name: {attr_err}"
             logging.exception(message)
+
+        return title_container.get_text().strip()
 
     # Private methods
     def _get_num_episodes(self, timeout: int = 10) -> int:
