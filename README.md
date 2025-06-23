@@ -17,14 +17,17 @@
 ```
 project-root/
 ├── helpers/
-│ ├── anime_utils.py     # Utilities for extracting information from AnimeUnity.
-│ ├── download_utils.py  # Utilities for managing the download process
-│ ├── file_utils.py      # Utilities for managing file operations
-│ ├── general_utils.py   # Miscellaneous utility functions
-│ └── progress_utils.py  # Tools for progress tracking and reporting
-├── anime_downloader.py  # Module for downloading anime episodes
-├── main.py              # Main script to run the downloader
-└── URLs.txt             # Text file containing anime URLs
+│ ├── crawlers/
+│ │ ├── crawler.py        # Module for crawling tasks
+│ │ └── crawler_utils.py  # Utilities for extracting media download links
+│ ├── config.py           # Manages constants and settings used across the project
+│ ├── download_utils.py   # Utilities for managing the download process
+│ ├── file_utils.py       # Utilities for managing file operations
+│ ├── general_utils.py    # Miscellaneous utility functions
+│ └── progress_utils.py   # Tools for progress tracking and reporting
+├── anime_downloader.py   # Module for downloading anime episodes
+├── main.py               # Main script to run the downloader
+└── URLs.txt              # Text file containing anime URLs
 ```
 
 ## Dependencies
