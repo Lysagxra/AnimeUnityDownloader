@@ -60,18 +60,53 @@ class Crawler:
 
     # Static methods
     @staticmethod
-    def extract_anime_name(soup: BeautifulSoup) -> str:
+    def extract_anime_name(soup: BeautifulSoup, url: str = None) -> str:
         """Extract the anime name from the provided BeautifulSoup object."""
         try:
+            # First try the original method
             title_container = soup.find("h1", {"class": "title"})
-            if title_container is None:
-                logging.error("Anime title tag not found.")
+            if title_container is not None:
+                return title_container.get_text().strip()
+            
+            # Fallback: Extract from HTML title tag
+            title_tag = soup.find("title")
+            if title_tag and title_tag.string:
+                title_text = title_tag.string
+                logging.info(f"Using title tag: {title_text}")
+                
+                # Extract anime name from AnimeUnity title format
+                if "AnimeUnity ~" in title_text:
+                    anime_name = title_text.split("AnimeUnity ~")[1].split("Streaming")[0].strip()
+                    if anime_name:
+                        return anime_name
+                
+                # Fallback: Just use the title with cleanup  
+                title_text = title_text.replace("AnimeUnity", "").replace("~", "").strip()
+                if title_text:
+                    return title_text
 
-            return title_container.get_text().strip()
+            # If all else fails, try meta og:title
+            og_title = soup.find("meta", property="og:title")
+            if og_title:
+                return og_title.get("content", "Unknown Anime")
+            
+            # Last resort: extract from URL
+            if url:
+                import re
+                # URL pattern: /anime/ID-anime-name
+                match = re.search(r'/anime/\d+-(.+)$', url)
+                if match:
+                    anime_name = match.group(1).replace('-', ' ').title()
+                    logging.info(f"Extracted anime name from URL: {anime_name}")
+                    return anime_name
+            
+            logging.error("Could not extract anime name from any source")
+            return "Unknown Anime"
 
         except AttributeError as attr_err:
             message = f"Error extracting anime name: {attr_err}"
             logging.exception(message)
+            return "Unknown Anime"
 
     # Private methods
     def _get_num_episodes(self, timeout: int = 10) -> int:

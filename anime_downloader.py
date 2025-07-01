@@ -37,8 +37,6 @@ from helpers.general_utils import (
 )
 from helpers.progress_utils import create_progress_bar, create_progress_table
 
-HEADERS = prepare_headers()
-
 
 def download_episode(
     download_link: str,
@@ -49,8 +47,9 @@ def download_episode(
     """Download an episode from the download link and provides progress updates."""
     for attempt in range(retries):
         try:
+            headers = prepare_headers()
             response = requests.get(
-                download_link, stream=True, headers=HEADERS, timeout=10,
+                download_link, stream=True, headers=headers, timeout=10,
             )
             response.raise_for_status()
 
@@ -93,7 +92,7 @@ async def process_anime_download(
     video_urls = await crawler.collect_video_urls()
 
     try:
-        anime_name = crawler.extract_anime_name(soup)
+        anime_name = crawler.extract_anime_name(soup, url)
         download_path = create_download_directory(anime_name)
         download_anime(anime_name, video_urls, download_path)
 
