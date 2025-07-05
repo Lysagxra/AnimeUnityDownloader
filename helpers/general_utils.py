@@ -15,15 +15,127 @@ from pathlib import Path
 
 import httpx
 import requests
+import cloudscraper
 from bs4 import BeautifulSoup
 
 from .config import DOWNLOAD_FOLDER, prepare_headers
+
+
+def show_vpn_popup():
+    """Show a popup suggesting to use a VPN from Italy to avoid 403 errors."""
+    try:
+        import tkinter as tk
+        from tkinter import messagebox
+        
+        # Create a root window but hide it
+        root = tk.Tk()
+        root.withdraw()
+        
+        # Show the popup message
+        messagebox.showwarning(
+            "403 Forbidden Error",
+            "AnimeUnity is blocking your connection.\n\n"
+            "🇮🇹 To avoid this error, please:\n"
+            "• Connect to Italy using a VPN\n"
+            "• Use an Italian IP address\n"
+            "• Try again after connecting\n\n"
+            "The website restricts access from certain countries."
+        )
+        
+        # Destroy the root window
+        root.destroy()
+        
+    except ImportError:
+        # If tkinter is not available, print to console
+        print("\n" + "="*50)
+        print("🚫 403 FORBIDDEN ERROR")
+        print("="*50)
+        print("AnimeUnity is blocking your connection.")
+        print()
+        print("🇮🇹 To avoid this error, please:")
+        print("• Connect to Italy using a VPN")
+        print("• Use an Italian IP address") 
+        print("• Try again after connecting")
+        print()
+        print("The website restricts access from certain countries.")
+        print("="*50)
+    except Exception as e:
+        # Fallback to console message if GUI fails
+        print(f"\n⚠️  403 Error: Connect from Italy with a VPN to access AnimeUnity")
 
 
 def add_random_delay(min_delay: float = 0.5, max_delay: float = 2.0) -> None:
     """Add a random delay to avoid being detected as a bot."""
     delay = random.uniform(min_delay, max_delay)
     time.sleep(delay)
+
+
+def fetch_page_cloudflare(url: str, timeout: int = 10) -> BeautifulSoup:
+    """Fetch HTML content from a Cloudflare-protected webpage using cloudscraper."""
+    # Add random delay to avoid bot detection
+    add_random_delay()
+    
+    try:
+        # Create a cloudscraper session with SSL verification disabled
+        scraper = cloudscraper.create_scraper(
+            browser={
+                'browser': 'firefox',
+                'platform': 'darwin',  # macOS
+                'desktop': True
+            }
+        )
+        
+        # Disable SSL verification
+        scraper.verify = False
+        
+        # Suppress SSL warnings
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        
+        # Get headers and update them
+        headers = prepare_headers()
+        headers.update({
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+            'Accept-Language': 'en-US,en;q=0.9,it;q=0.8',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Cache-Control': 'max-age=0',
+        })
+        
+        # Make the request using cloudscraper
+        response = scraper.get(url, headers=headers, timeout=timeout)
+        response.raise_for_status()
+        
+        # Parse and return the HTML
+        soup = BeautifulSoup(response.text, "html.parser")
+        
+        # Log success
+        logging.info(f"Successfully fetched {len(response.text)} characters from {url} using cloudscraper")
+        
+        return soup
+        
+    except requests.RequestException as req_err:
+        if hasattr(req_err, 'response') and req_err.response is not None:
+            if req_err.response.status_code == 403:
+                logging.error(f"Cloudflare protection still blocking access to {url}")
+                logging.error("Consider using a different IP address or VPN")
+                show_vpn_popup()  # Show VPN suggestion popup
+            else:
+                logging.error(f"Request failed with status {req_err.response.status_code}: {req_err}")
+        else:
+            logging.error(f"Request failed: {req_err}")
+            # Check if it's an SSL or connection error that might be geo-blocked
+            if "SSL" in str(req_err) or "certificate" in str(req_err).lower() or "Cannot set verify_mode" in str(req_err):
+                show_vpn_popup()
+        
+        # Re-raise the exception so calling code can handle it
+        raise
 
 
 def fetch_page(url: str, timeout: int = 10) -> BeautifulSoup:
@@ -33,6 +145,12 @@ def fetch_page(url: str, timeout: int = 10) -> BeautifulSoup:
     
     # Create a new session per worker
     session = requests.Session()
+    session.verify = False
+    
+    # Suppress SSL warnings
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    
     headers = prepare_headers()
     
     # Add additional headers to look more like a real browser
@@ -83,11 +201,18 @@ def fetch_page(url: str, timeout: int = 10) -> BeautifulSoup:
     except requests.RequestException as req_err:
         if hasattr(req_err, 'response') and req_err.response is not None:
             if req_err.response.status_code == 403:
-                logging.error(f"Access forbidden (403) for URL: {url}")
-                logging.error("The website may be blocking bot traffic. Consider:")
-                logging.error("1. Using a VPN or different IP address")
-                logging.error("2. Adding delays between requests")
-                logging.error("3. Using proxy rotation")
+                logging.warning(f"403 error with requests, trying cloudscraper for {url}")
+                # Fallback to cloudscraper for Cloudflare protection
+                try:
+                    return fetch_page_cloudflare(url, timeout)
+                except Exception as cf_err:
+                    logging.error(f"Cloudscraper also failed: {cf_err}")
+                    logging.error("The website may be blocking bot traffic. Consider:")
+                    logging.error("1. Using a VPN or different IP address")
+                    logging.error("2. Adding delays between requests")
+                    logging.error("3. Using proxy rotation")
+                    show_vpn_popup()  # Show VPN suggestion popup
+                    sys.exit(1)
         
         message = f"Error fetching page {url}: {req_err}"
         logging.exception(message)
@@ -117,11 +242,12 @@ def fetch_page_httpx(url: str, timeout: int = 10) -> BeautifulSoup:
     })
     
     try:
-        # Create httpx client with proper decompression
+        # First try with regular httpx
         with httpx.Client(
             headers=headers, 
             timeout=timeout, 
-            follow_redirects=True
+            follow_redirects=True,
+            verify=False
         ) as client:
             response = client.get(url)
             response.raise_for_status()
@@ -149,12 +275,14 @@ def fetch_page_httpx(url: str, timeout: int = 10) -> BeautifulSoup:
             
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 403:
-            logging.error(f"Access forbidden (403) for URL: {url}")
-            logging.error("The website may be blocking bot traffic. Consider:")
-            logging.error("1. Using a VPN or different IP address")
-            logging.error("2. Adding delays between requests")
-            logging.error("3. Using proxy rotation")
-            raise
+            logging.warning(f"403 error with httpx, trying cloudscraper for {url}")
+            # Fallback to cloudscraper for Cloudflare protection
+            try:
+                return fetch_page_cloudflare(url, timeout)
+            except Exception as cf_err:
+                logging.error(f"Cloudscraper also failed: {cf_err}")
+                show_vpn_popup()  # Show VPN suggestion popup
+                raise e  # Re-raise the original 403 error
         else:
             raise
 

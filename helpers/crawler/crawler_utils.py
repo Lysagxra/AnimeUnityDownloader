@@ -16,6 +16,7 @@ from asyncio import Semaphore
 from urllib.parse import urlparse
 
 import httpx
+import cloudscraper
 
 from helpers.config import prepare_headers
 
@@ -59,6 +60,77 @@ def validate_episode_range(
     return start_episode, end_episode
 
 
+async def fetch_with_cloudscraper(url: str, headers: dict = None, params: dict = None, timeout: int = 15) -> dict | None:
+    """Fetch data using cloudscraper as a fallback for Cloudflare protection."""
+    try:
+        # Create a cloudscraper session
+        scraper = cloudscraper.create_scraper(
+            browser={
+                'browser': 'firefox',
+                'platform': 'darwin',  # macOS
+                'desktop': True
+            }
+        )
+        
+        # Disable SSL verification
+        scraper.verify = False
+        
+        # Suppress SSL warnings
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        
+        # Use provided headers or get new ones
+        if headers is None:
+            from helpers.config import prepare_headers
+            headers = prepare_headers()
+            headers.update({
+                'Accept': 'application/json, text/plain, */*',
+                'Accept-Language': 'en-US,en;q=0.9,it;q=0.8',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+                'Sec-Fetch-Dest': 'empty',
+                'Sec-Fetch-Mode': 'cors',
+                'Sec-Fetch-Site': 'same-origin',
+                'Cache-Control': 'max-age=0',
+            })
+        
+        # Make the request (cloudscraper is synchronous, so we need to handle this)
+        response = scraper.get(url, headers=headers, params=params, timeout=timeout)
+        response.raise_for_status()
+        
+        logging.info(f"Successfully fetched {url} using cloudscraper")
+        
+        # Create a mock response object similar to httpx response
+        class MockResponse:
+            def __init__(self, response):
+                self.status_code = response.status_code
+                self.text = response.text
+                self.content = response.content
+                self.headers = response.headers
+                self._response = response
+                
+            def json(self):
+                return self._response.json()
+                
+            def raise_for_status(self):
+                self._response.raise_for_status()
+        
+        return MockResponse(response)
+        
+    except Exception as e:
+        logging.error(f"Cloudscraper failed for {url}: {e}")
+        # Check if it's a geo-blocking related error and show popup
+        if "403" in str(e) or "SSL" in str(e) or "certificate" in str(e).lower() or "Cannot set verify_mode" in str(e):
+            # Import the popup function
+            try:
+                from helpers.general_utils import show_vpn_popup
+                show_vpn_popup()
+            except ImportError:
+                print("\n⚠️  Connect from Italy with a VPN to access AnimeUnity")
+        return None
+
+
 async def fetch_with_retries(
     url: str,
     semaphore: Semaphore,
@@ -83,7 +155,8 @@ async def fetch_with_retries(
                 'Cache-Control': 'max-age=0',
             })
         
-        async with httpx.AsyncClient(headers=headers, timeout=15, follow_redirects=True) as client:
+        # First try with httpx
+        async with httpx.AsyncClient(headers=headers, timeout=15, follow_redirects=True, verify=False) as client:
             for attempt in range(retries):
                 try:
                     # Add random delay to avoid bot detection
@@ -100,24 +173,30 @@ async def fetch_with_retries(
 
                 except httpx.HTTPStatusError as e:
                     if e.response.status_code == 403:
-                        logging.warning(f"Access forbidden (403) for URL: {url} - attempt {attempt + 1}")
+                        logging.warning(f"403 error with httpx for {url} - attempt {attempt + 1}")
                         if attempt < retries - 1:
                             delay = 2 ** attempt + random.uniform(1, 3)  # Longer delay for 403
                             await asyncio.sleep(delay)
                         else:
-                            logging.error(f"All retries failed for URL: {url} due to 403 Forbidden")
-                            return None
+                            # All httpx attempts failed with 403, try cloudscraper
+                            logging.warning(f"All httpx attempts failed for {url}, trying cloudscraper")
+                            return await fetch_with_cloudscraper(url, headers, params)
                     else:
                         if attempt < retries - 1:
                             delay = 2 ** attempt + random.uniform(0, 2)
                             await asyncio.sleep(delay)
 
                 except httpx.RequestError as req_err:
-                    message = f"Request failed for {url}: {req_err}"
-                    logging.exception(message)
-                    return None
+                    logging.warning(f"Request error for {url}: {req_err}")
+                    if attempt < retries - 1:
+                        delay = 2 ** attempt + random.uniform(0, 2)
+                        await asyncio.sleep(delay)
+                    else:
+                        # Try cloudscraper as last resort
+                        logging.warning(f"All httpx attempts failed for {url}, trying cloudscraper")
+                        return await fetch_with_cloudscraper(url, headers, params)
 
-    return None
+        return None
 
 
 def extract_download_link(script_items: list, video_url: str) -> str | None:
