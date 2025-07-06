@@ -35,6 +35,7 @@ from .config import (
 # Suppress SSL warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+
 def add_random_delay(min_delay: float = 0.5, max_delay: float = 2.0) -> None:
     """Add a random delay to avoid being detected as a bot."""
     delay = random.uniform(min_delay, max_delay)  # noqa: S311
@@ -44,7 +45,7 @@ def add_random_delay(min_delay: float = 0.5, max_delay: float = 2.0) -> None:
 def prepare_cloudscraper_session() -> CloudScraper:
     """Create a cloudscraper session to mimic a Firefox browser on macOS."""
     scraper = cloudscraper.create_scraper(
-       browser = {
+        browser={
             "browser": "firefox",
             "platform": "darwin",  # macOS
             "desktop": True,
@@ -61,22 +62,25 @@ def fetch_page_cloudflare(url: str, timeout: int = 10) -> BeautifulSoup:
     # Add random delay to avoid bot detection
     add_random_delay()
 
+    # Create a cloudscraper session with SSL verification disabled
+    scraper = prepare_cloudscraper_session()
+
+    # Get headers and update them
+    headers = prepare_headers()
+    headers.update(ENCODING_HEADERS)
+
     try:
-        # Create a cloudscraper session with SSL verification disabled
-        scraper = prepare_cloudscraper_session()
-
-        # Get headers and update them
-        headers = prepare_headers()
-        headers.update(ENCODING_HEADERS)
-
         # Make the request using cloudscraper
         response = scraper.get(url, headers=headers, timeout=timeout)
         response.raise_for_status()
 
     except requests.RequestException as req_err:
-        if hasattr(req_err, "response") and req_err.response is not None:
-            if req_err.response.status_code == HTTP_STATUS_FORBIDDEN:
-                logging.exception("Cloudflare protection still blocking access")
+        if (
+            hasattr(req_err, "response")
+            and req_err.response is not None
+            and req_err.response.status_code == HTTP_STATUS_FORBIDDEN
+        ):
+            logging.exception("Cloudflare protection still blocking access")
 
         else:
             log_message = f"Request failed: {req_err}"
@@ -87,6 +91,29 @@ def fetch_page_cloudflare(url: str, timeout: int = 10) -> BeautifulSoup:
 
     # Parse and return the HTML
     return BeautifulSoup(response.text, "html.parser")
+
+
+def decompress_response(response: requests.Response) -> str:
+    """Decompress the content of an HTTP response.
+
+    Fall back to response.text if decompression fails.
+    """
+    encoding = response.headers.get("content-encoding", "").lower()
+
+    try:
+        if "br" in encoding:
+            return brotli.decompress(response.content).decode("utf-8")
+
+        if "gzip" in encoding:
+            return gzip.decompress(response.content).decode("utf-8")
+
+    except (BrotliError, OSError, UnicodeDecodeError) as decompress_err:
+        log_message = (
+            f"Decompression failed: {decompress_err}... using original response text"
+        )
+        logging.exception(log_message)
+
+    return response.text
 
 
 def fetch_page(url: str, timeout: int = 10) -> BeautifulSoup:
@@ -115,23 +142,7 @@ def fetch_page(url: str, timeout: int = 10) -> BeautifulSoup:
         if len(text_content) < MIN_CONTENT_LENGTH or not any(
             tag in text_content.lower() for tag in ["<html", "<head", "<title"]
         ):
-            try:
-                # Try brotli decompression if available
-                if "br" in response.headers.get("content-encoding", ""):
-                    text_content = brotli.decompress(response.content).decode("utf-8")
-
-                # Try gzip decompression
-                elif "gzip" in response.headers.get("content-encoding", ""):
-                    text_content = gzip.decompress(response.content).decode("utf-8")
-
-            except (BrotliError, OSError, UnicodeDecodeError) as decompress_err:
-                # Use original content
-                log_message = (
-                    f"Decompression failed: {decompress_err}... "
-                    "using original response text"
-                )
-                logging.exception(log_message)
-                text_content = response.text
+            text_content = decompress_response(response)
 
         return BeautifulSoup(text_content, "html.parser")
 
@@ -170,7 +181,7 @@ def fetch_page_httpx(url: str, timeout: int = 10) -> BeautifulSoup:
             headers=headers,
             timeout=timeout,
             follow_redirects=True,
-            verify=False,
+            verify=False,  # noqa: S501
         ) as client:
             response = client.get(url)
             response.raise_for_status()

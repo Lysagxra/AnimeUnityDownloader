@@ -18,6 +18,9 @@ DOWNLOAD_WORKERS = 2           # The maximum number of worker threads for downlo
 # Regex pattern to extract download URL
 DOWNLOAD_LINK_PATTERN = r"window\.downloadUrl\s*=\s*'(https?:\/\/[^\s']+)'"
 
+# Regex pattern to extract the anime name
+ANIME_NAME_PATTERN = r"/anime/\d+-(.+)$"
+
 # Constants for file sizes, expressed in bytes.
 KB = 1024
 MB = 1024 * KB

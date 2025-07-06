@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 
 import httpx
 
-from helpers.config import CRAWLER_WORKERS, prepare_headers
+from helpers.config import ANIME_NAME_PATTERN, CRAWLER_WORKERS, prepare_headers
 
 from .crawler_utils import (
     episode_in_range,
@@ -82,7 +82,7 @@ class Crawler:
             # Last resort: Extract from URL
             if url:
                 # URL pattern: /anime/ID-anime-name
-                match = re.search(r"/anime/\d+-(.+)$", url)
+                match = re.search(ANIME_NAME_PATTERN, url)
                 if match:
                     return match.group(1).replace("-", " ").title()
 
