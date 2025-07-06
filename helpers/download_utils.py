@@ -30,8 +30,8 @@ def get_episode_filename(download_link: str) -> str | None:
     """Extract the file name from the provided episode download link."""
     if download_link:
         try:
-            filename = unquote(download_link.split("=")[-1])
-            return remove_special_characters(filename)
+            filename = unquote(download_link.split("=")[-1])  # Original name
+            return remove_special_characters(filename)  # Cleaned name
 
         except IndexError as indx_err:
             message = f"Error while extracting the file name: {indx_err}"

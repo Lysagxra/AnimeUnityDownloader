@@ -33,11 +33,56 @@ THRESHOLDS = [
 # Default chunk size for files larger than the largest threshold.
 LARGE_FILE_CHUNK_SIZE = 2 * MB
 
+# HTTP status codes.
+HTTP_STATUS_FORBIDDEN = 403
+
+# Minimum content length to check if text is too short or missing basic HTML tags
+MIN_CONTENT_LENGTH = 1000
+
+# Common headers shared across all types of requests
+COMMON_HEADERS = {
+    "Accept-Language": "en-US,en;q=0.9,it;q=0.8",
+    "DNT": "1",
+    "Connection": "keep-alive",
+    "Cache-Control": "max-age=0",
+}
+
+# Headers for API / JSON endpoints
+BASE_HEADERS = {
+    **COMMON_HEADERS,
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-origin",
+}
+
+# Headers for standard browser-like HTML requests
+DEFAULT_HEADERS = {
+    **COMMON_HEADERS,
+    "Accept": (
+        "text/html,application/xhtml+xml,application/xml;q=0.9,"
+        "image/avif,image/webp,image/apng,*/*;q=0.8,"
+        "application/signed-exchange;v=b3;q=0.7"
+    ),
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+}
+
+# Like DEFAULT_HEADERS, but explicitly adds Accept-Encoding
+ENCODING_HEADERS = {
+    **DEFAULT_HEADERS,
+    "Accept-Encoding": "gzip, deflate, br",
+}
+
 # Creating a user-agent rotator
 USER_AGENT_ROTATOR = UserAgent(use_external_data=True)
 
 
-def prepare_headers() -> dict:
+def prepare_headers() -> dict[str, str]:
     """Prepare a random HTTP headers with a user-agent string for making requests."""
     user_agent = str(USER_AGENT_ROTATOR.firefox)
     return {"User-Agent": user_agent}

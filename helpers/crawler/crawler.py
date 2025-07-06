@@ -18,6 +18,7 @@ from helpers.config import CRAWLER_WORKERS, prepare_headers
 from .crawler_utils import (
     episode_in_range,
     extract_host_domain,
+    extract_name_from_title_tag,
     fetch_with_retries,
     validate_episode_range,
     validate_url,
@@ -30,7 +31,7 @@ HEADERS = prepare_headers()
 
 
 class Crawler:
-    """Class responsible for crawling an anime.
+    """class responsible for crawling an anime.
 
     Extract episode IDs, generate embed URLs, and retrieve video URLs for a specified
     range of episodes.
@@ -60,18 +61,38 @@ class Crawler:
 
     # Static methods
     @staticmethod
-    def extract_anime_name(soup: BeautifulSoup) -> str:
+    def extract_anime_name(soup: BeautifulSoup, url: str | None = None) -> str:
         """Extract the anime name from the provided BeautifulSoup object."""
         try:
+            # First try the original method
             title_container = soup.find("h1", {"class": "title"})
-            if title_container is None:
-                logging.error("Anime title tag not found.")
+            if title_container is not None:
+                return title_container.get_text().strip()
+
+            # Fallback: Extract from HTML title tag
+            title_tag = soup.find("title")
+            if title_tag and title_tag.string:
+                return extract_name_from_title_tag(title_tag)
+
+            # If all else fails, try meta og:title
+            og_title = soup.find("meta", property="og:title")
+            if og_title:
+                return og_title.get("content", "")
+
+            # Last resort: Extract from URL
+            if url:
+                # URL pattern: /anime/ID-anime-name
+                match = re.search(r"/anime/\d+-(.+)$", url)
+                if match:
+                    return match.group(1).replace("-", " ").title()
 
         except AttributeError as attr_err:
             message = f"Error extracting anime name: {attr_err}"
             logging.exception(message)
+            return ""
 
-        return title_container.get_text().strip()
+        logging.error("Could not extract anime name from any source")
+        return ""
 
     # Private methods
     def _get_num_episodes(self, timeout: int = 10) -> int:
@@ -108,32 +129,32 @@ class Crawler:
             "start_range": 0,
             "end_range": self.num_episodes + 1,
         }
-
         response = await fetch_with_retries(
             episode_api_url,
             self.semaphore,
             headers=HEADERS,
             params=params,
         )
+
         if response:
-            episode_info = response.json().get("episodes", [])
+            episode_infos = response.json().get("episodes", [])
             return (
-                [(ep["id"], ep["number"]) for ep in episode_info]
-                if episode_info
+                [(info["id"], info["number"]) for info in episode_infos]
+                if episode_infos
                 else None
             )
 
         return None
 
-    async def _collect_episode_ids(self) -> list[int]:
+    async def _collect_episode_ids(self) -> list[str]:
         """Retrieve a list of episode IDs from a given URL."""
         validate_episode_range(self.start_episode, self.end_episode, self.num_episodes)
 
         episodes = await self._get_episode_ids()
         return [
-            ep[0]
-            for ep in episodes
-            if episode_in_range(ep[1], self.start_episode, self.end_episode)
+            episode[0]
+            for episode in episodes
+            if episode_in_range(episode[1], self.start_episode, self.end_episode)
         ]
 
     def _generate_episode_embed_urls(self, episode_ids: str) -> list[str]:
@@ -150,6 +171,7 @@ class Crawler:
             self.semaphore,
             headers=HEADERS,
         )
+
         if response:
             return response.text.strip()
 
