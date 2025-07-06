@@ -15,7 +15,7 @@ import asyncio
 import logging
 import random
 import time
-from argparse import ArgumentParser
+from argparse import Namespace
 from pathlib import Path
 
 import requests
@@ -54,15 +54,16 @@ def download_episode(
             )
             response.raise_for_status()
 
+        except requests.RequestException:
+            if attempt < retries - 1:
+                delay = 10 * (attempt + 1) + random.uniform(1, 2)  # noqa: S311
+                time.sleep(delay)
+
+        else:
             filename = get_episode_filename(download_link)
             final_path = Path(download_path) / filename
             save_file_with_progress(response, final_path, task_info)
             break
-
-        except requests.RequestException:
-            if attempt < retries - 1:
-                delay = 10 * (attempt + 1) + random.uniform(0, 2)  # noqa: S311
-                time.sleep(delay)
 
 
 def process_video_url(video_url: str, download_path: str, task_info: tuple) -> None:
@@ -102,8 +103,8 @@ async def process_anime_download(
         logging.exception(message)
 
 
-def setup_parser() -> ArgumentParser:
-    """Set up the argument parser for the anime download script."""
+def parse_arguments() -> Namespace:
+    """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
         description="Download anime episodes from a given URL.",
     )
@@ -114,14 +115,13 @@ def setup_parser() -> ArgumentParser:
     parser.add_argument(
         "--end", type=int, default=None, help="The ending episode number.",
     )
-    return parser
+    return parser.parse_args()
 
 
 async def main() -> None:
     """Execute the script to download anime episodes from a given AnimeUnity URL."""
     clear_terminal()
-    parser = setup_parser()
-    args = parser.parse_args()
+    args = parse_arguments()
     await process_anime_download(
         args.url, start_episode=args.start, end_episode=args.end,
     )

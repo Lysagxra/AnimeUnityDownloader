@@ -45,9 +45,8 @@ def validate_episode_range(
         logging.error(message)
         sys.exit(1)
 
-    if start_episode:
-        if start_episode < 1 or start_episode > num_episodes:
-            log_and_exit(f"Start episode must be between 1 and {num_episodes}.")
+    if start_episode and (start_episode < 1 or start_episode > num_episodes):
+        log_and_exit(f"Start episode must be between 1 and {num_episodes}.")
 
     if start_episode and end_episode:
         if start_episode > end_episode:
@@ -94,7 +93,6 @@ async def fetch_with_retries(
                     timeout=10,
                 )
                 response.raise_for_status()
-                return response
 
             except httpx.HTTPStatusError:
                 if attempt < retries - 1:
@@ -105,6 +103,8 @@ async def fetch_with_retries(
                 message = f"Request failed for {url}: {req_err}"
                 logging.exception(message)
                 return None
+
+            return response
 
     return None
 

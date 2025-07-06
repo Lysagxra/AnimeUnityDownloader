@@ -26,12 +26,13 @@ def fetch_page(url: str, timeout: int = 10) -> BeautifulSoup:
     try:
         response = session.get(url, timeout=timeout)
         response.raise_for_status()
-        return BeautifulSoup(response.text, "html.parser")
 
     except requests.RequestException as req_err:
         message = f"Error fetching page {url}: {req_err}"
         logging.exception(message)
         sys.exit(1)
+
+    return BeautifulSoup(response.text, "html.parser")
 
 
 def fetch_page_httpx(url: str, timeout: int = 10) -> BeautifulSoup:
