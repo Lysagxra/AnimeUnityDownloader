@@ -82,7 +82,7 @@ ENCODING_HEADERS = {
 }
 
 # Creating a user-agent rotator
-USER_AGENT_ROTATOR = UserAgent(use_external_data=True)
+USER_AGENT_ROTATOR = UserAgent()
 
 
 def prepare_headers() -> dict[str, str]:
