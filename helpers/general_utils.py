@@ -1,7 +1,7 @@
 """Utilities for fetching web pages, managing directories, and clearing the terminal.
 
 This module includes functions to handle common tasks such as sending HTTP requests,
-parsing HTML, creating download directories, and  clearing the terminal, making it
+parsing HTML, creating download directories, and clearing the terminal, making it
 reusable across projects.
 """
 
@@ -166,31 +166,27 @@ def fetch_page(url: str, timeout: int = 10) -> BeautifulSoup:
         sys.exit(1)
 
 
-def fetch_page_httpx(url: str, timeout: int = 10) -> BeautifulSoup:
-    """Fetch the HTML content using HTTPX with better bot detection avoidance."""
+async def fetch_page_httpx(url: str, timeout: int = 10) -> BeautifulSoup:
+    """Fetch the HTML content using HTTPX with better bot detection avoidance (async)."""
     # Add random delay to avoid bot detection
     add_random_delay()
 
-    # Add additional headers to look more like a real browser
-    headers = prepare_headers()
-    headers.update(ENCODING_HEADERS)
+    # Combine headers properly (Python 3.9+)
+    headers = prepare_headers() | ENCODING_HEADERS
 
     try:
-        # First try with regular httpx
-        with httpx.Client(
+        async with httpx.AsyncClient(
             headers=headers,
             timeout=timeout,
             follow_redirects=True,
             verify=False,  # noqa: S501
         ) as client:
-            response = client.get(url)
+            response = await client.get(url)
             response.raise_for_status()
 
-            # Get the properly decoded text content
             html_content = response.text
             soup = BeautifulSoup(html_content, "html.parser")
 
-            # Try different parsing
             if not soup.find("html") and not soup.find("head"):
                 logging.warning("Response doesn't appear to be valid HTML")
                 soup = BeautifulSoup(html_content, "lxml")
