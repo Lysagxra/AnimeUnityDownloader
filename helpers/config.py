@@ -10,6 +10,8 @@ DOWNLOAD_FOLDER = "Downloads"  # The folder where downloaded files will be store
 URLS_FILE = "URLs.txt"         # The name of the file containing URLs.
 
 TASK_COLOR = "cyan"            # The color to be used for task-related messages.
+BATCH_SIZE = 120               # The maximum number of episodes the API allows per
+                               # request
 CRAWLER_WORKERS = 8            # The maximum number of worker threads for crawling
                                # tasks.
 DOWNLOAD_WORKERS = 2           # The maximum number of worker threads for downloading
@@ -24,7 +26,6 @@ KB = 1024
 MB = 1024 * KB
 
 # Thresholds for file sizes and corresponding chunk sizes used during download.
-# Each tuple represents: (file size threshold, chunk size to download in that range).
 THRESHOLDS = [
     (50 * MB, 128 * KB),   # Less than 50 MB
     (100 * MB, 256 * KB),  # 50 MB to 100 MB
