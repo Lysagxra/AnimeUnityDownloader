@@ -7,7 +7,7 @@ into a single location.
 from fake_useragent import UserAgent
 
 DOWNLOAD_FOLDER = "Downloads"  # The folder where downloaded files will be stored.
-FILE = "URLs.txt"              # The name of the file containing URLs.
+URLS_FILE = "URLs.txt"         # The name of the file containing URLs.
 
 TASK_COLOR = "cyan"            # The color to be used for task-related messages.
 CRAWLER_WORKERS = 8            # The maximum number of worker threads for crawling
@@ -15,13 +15,11 @@ CRAWLER_WORKERS = 8            # The maximum number of worker threads for crawli
 DOWNLOAD_WORKERS = 2           # The maximum number of worker threads for downloading
                                # tasks.
 
-# Regex pattern to extract download URL
+# Regex patterns to extract download URL and the anime name
 DOWNLOAD_LINK_PATTERN = r"window\.downloadUrl\s*=\s*'(https?:\/\/[^\s']+)'"
-
-# Regex pattern to extract the anime name
 ANIME_NAME_PATTERN = r"/anime/\d+-(.+)$"
 
-# Constants for file sizes, expressed in bytes.
+# Constants for file sizes, expressed in bytes
 KB = 1024
 MB = 1024 * KB
 
@@ -33,10 +31,10 @@ THRESHOLDS = [
     (250 * MB, 1 * MB),    # 100 MB to 250 MB
 ]
 
-# Default chunk size for files larger than the largest threshold.
+# Default chunk size for files larger than the largest threshold
 LARGE_FILE_CHUNK_SIZE = 2 * MB
 
-# HTTP status codes.
+# HTTP status codes
 HTTP_STATUS_FORBIDDEN = 403
 
 # Minimum content length to check if text is too short or missing basic HTML tags

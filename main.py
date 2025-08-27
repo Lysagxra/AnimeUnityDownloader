@@ -12,7 +12,7 @@ Usage:
 import asyncio
 
 from anime_downloader import process_anime_download
-from helpers.config import FILE
+from helpers.config import URLS_FILE
 from helpers.file_utils import read_file, write_file
 from helpers.general_utils import clear_terminal
 
@@ -29,9 +29,9 @@ async def main() -> None:
     Reads URLs from a file, processes them, and clears the file at the end.
     """
     clear_terminal()
-    urls = read_file(FILE)
+    urls = read_file(URLS_FILE)
     await process_urls(urls)
-    write_file(FILE)
+    write_file(URLS_FILE)
 
 
 if __name__ == "__main__":

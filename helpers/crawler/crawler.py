@@ -124,29 +124,27 @@ class Crawler:
 
     async def _get_episode_ids(self) -> list[tuple[int, str]] | None:
         """Fetch the IDs of all the episodes from an API."""
-        max_batch = 120
-        all_episode_infos = []
-        # Episode numbers start from 1
-        total_episodes = self.num_episodes + 1
-        for batch_start in range(1, total_episodes, max_batch):
-            batch_end = min(batch_start + max_batch - 1, total_episodes)
-            episode_api_url = f"{self.api_url}/0"
-            params = {
-                "start_range": batch_start,
-                "end_range": batch_end,
-            }
-            response = await fetch_with_retries(
-                episode_api_url,
-                self.semaphore,
-                headers=HEADERS,
-                params=params,
+        episode_api_url = f"{self.api_url}/0"
+        params = {
+            "start_range": 0,
+            "end_range": self.num_episodes + 1,
+        }
+        response = await fetch_with_retries(
+            episode_api_url,
+            self.semaphore,
+            headers=HEADERS,
+            params=params,
+        )
+
+        if response:
+            episode_infos = response.json().get("episodes", [])
+            return (
+                [(info["id"], info["number"]) for info in episode_infos]
+                if episode_infos
+                else None
             )
-            if response:
-                response_json = response.json()
-                episode_infos = response_json.get("episodes", [])
-                all_episode_infos.extend(episode_infos)
-        
-        return [(info["id"], info["number"]) for info in all_episode_infos]
+
+        return None
 
     async def _collect_episode_ids(self) -> list[str]:
         """Retrieve a list of episode IDs from a given URL."""
