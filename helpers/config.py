@@ -6,9 +6,22 @@ into a single location.
 
 from fake_useragent import UserAgent
 
+# ============================
+# Paths and Files
+# ============================
 DOWNLOAD_FOLDER = "Downloads"  # The folder where downloaded files will be stored.
 URLS_FILE = "URLs.txt"         # The name of the file containing URLs.
 
+# ============================
+# Regex Patterns
+# ============================
+# Regex patterns to extract download URL and the anime name
+DOWNLOAD_LINK_PATTERN = r"window\.downloadUrl\s*=\s*'(https?:\/\/[^\s']+)'"
+ANIME_NAME_PATTERN = r"/anime/\d+-(.+)$"
+
+# ============================
+# Download Settings
+# ============================
 TASK_COLOR = "cyan"            # The color to be used for task-related messages.
 BATCH_SIZE = 120               # The maximum number of episodes the API allows per
                                # request
@@ -16,10 +29,6 @@ CRAWLER_WORKERS = 8            # The maximum number of worker threads for crawli
                                # tasks.
 DOWNLOAD_WORKERS = 2           # The maximum number of worker threads for downloading
                                # tasks.
-
-# Regex patterns to extract download URL and the anime name
-DOWNLOAD_LINK_PATTERN = r"window\.downloadUrl\s*=\s*'(https?:\/\/[^\s']+)'"
-ANIME_NAME_PATTERN = r"/anime/\d+-(.+)$"
 
 # Constants for file sizes, expressed in bytes
 KB = 1024
@@ -35,6 +44,9 @@ THRESHOLDS = [
 # Default chunk size for files larger than the largest threshold
 LARGE_FILE_CHUNK_SIZE = 2 * MB
 
+# ============================
+# HTTP / Network Configuration
+# ============================
 # HTTP status codes
 HTTP_STATUS_FORBIDDEN = 403
 
@@ -74,16 +86,20 @@ DEFAULT_HEADERS = {
     "Sec-Fetch-User": "?1",
 }
 
-# Like DEFAULT_HEADERS, but explicitly adds Accept-Encoding
+# Headers with explicit encoding and compression options
 ENCODING_HEADERS = {
     **DEFAULT_HEADERS,
     "Accept-Encoding": "gzip, deflate, br",
 }
 
+# ============================
+# User-Agent Rotator
+# ============================
 # Creating a user-agent rotator
 USER_AGENT_ROTATOR = UserAgent()
 
 
+# Helper functions
 def prepare_headers() -> dict[str, str]:
     """Prepare a random HTTP headers with a user-agent string for making requests."""
     user_agent = str(USER_AGENT_ROTATOR.firefox)
