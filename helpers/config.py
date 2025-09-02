@@ -10,7 +10,7 @@ from fake_useragent import UserAgent
 # Paths and Files
 # ============================
 DOWNLOAD_FOLDER = "Downloads"  # The folder where downloaded files will be stored.
-URLS_FILE = "URLs.txt"         # The name of the file containing URLs.
+URLS_FILE = "URLs.txt"         # The file containing URLs to process.
 
 # ============================
 # Regex Patterns
@@ -45,7 +45,7 @@ THRESHOLDS = [
 LARGE_FILE_CHUNK_SIZE = 2 * MB
 
 # ============================
-# HTTP / Network Configuration
+# HTTP / Network
 # ============================
 # HTTP status codes
 HTTP_STATUS_FORBIDDEN = 403
