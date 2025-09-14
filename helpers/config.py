@@ -22,13 +22,10 @@ ANIME_NAME_PATTERN = r"/anime/\d+-(.+)$"
 # ============================
 # Download Settings
 # ============================
-TASK_COLOR = "cyan"            # The color to be used for task-related messages.
-BATCH_SIZE = 120               # The maximum number of episodes the API allows per
-                               # request
-CRAWLER_WORKERS = 8            # The maximum number of worker threads for crawling
-                               # tasks.
-DOWNLOAD_WORKERS = 2           # The maximum number of worker threads for downloading
-                               # tasks.
+TASK_COLOR = "cyan"   # The color to be used for task-related messages.
+BATCH_SIZE = 120      # The maximum number of episodes the API allows per request.
+CRAWLER_WORKERS = 8   # The maximum number of worker threads for crawling tasks.
+DOWNLOAD_WORKERS = 2  # The maximum number of worker threads for downloading tasks.
 
 # Constants for file sizes, expressed in bytes
 KB = 1024

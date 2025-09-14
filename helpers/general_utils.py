@@ -5,6 +5,8 @@ parsing HTML, creating download directories, and  clearing the terminal, making 
 reusable across projects.
 """
 
+from __future__ import annotations
+
 import gzip
 import logging
 import os
@@ -213,15 +215,22 @@ def sanitize_directory_name(directory_name: str) -> str:
     """
     invalid_chars_dict = {
         "nt": r'[\\/:*?"<>|]',  # Windows
-        "posix": r"[/:]",  # macOS and Linux
+        "posix": r"[/:]",       # macOS and Linux
     }
     invalid_chars = invalid_chars_dict.get(os.name)
     return re.sub(invalid_chars, "_", directory_name)
 
 
-def create_download_directory(directory_name: str) -> str:
+def create_download_directory(
+    directory_name: str, custom_path: str | None = None,
+) -> str:
     """Create a directory for downloads if it doesn't exist."""
-    download_path = Path(DOWNLOAD_FOLDER) / sanitize_directory_name(directory_name)
+    sanitized_directory_name = sanitize_directory_name(directory_name)
+    download_path = (
+        Path(custom_path) / DOWNLOAD_FOLDER / sanitized_directory_name
+        if custom_path is not None
+        else Path(DOWNLOAD_FOLDER) / sanitized_directory_name
+    )
 
     try:
         Path(download_path).mkdir(parents=True, exist_ok=True)
@@ -237,7 +246,7 @@ def create_download_directory(directory_name: str) -> str:
 def clear_terminal() -> None:
     """Clear the terminal screen based on the operating system."""
     commands = {
-        "nt": "cls",  # Windows
+        "nt": "cls",       # Windows
         "posix": "clear",  # macOS and Linux
     }
 
