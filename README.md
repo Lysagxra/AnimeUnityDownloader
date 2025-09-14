@@ -13,7 +13,20 @@
 - Tracks download progress with a progress bar.
 - Automatically creates a directory structure for organized storage.
 
+## Dependencies
+
+- Python 3
+- `requests` - for HTTP requests
+- `BeautifulSoup` (bs4) - for HTML parsing
+- `rich` - for progress display in terminal
+- `fake_useragent` - for generating fake user agents for web scraping
+- `httpx` - for making asynchronous HTTP requests
+
 ## Directory Structure
+
+<details>
+
+<summary>Expand Directory Structure</summary>
 
 ```
 project-root/
@@ -31,14 +44,7 @@ project-root/
 └── URLs.txt              # Text file containing anime URLs
 ```
 
-## Dependencies
-
-- Python 3
-- `requests` - for HTTP requests
-- `BeautifulSoup` (bs4) - for HTML parsing
-- `rich` - for progress display in terminal
-- `fake_useragent` - for generating fake user agents for web scraping
-- `httpx` - for making asynchronous HTTP requests
+</details>
 
 ## Installation
 
