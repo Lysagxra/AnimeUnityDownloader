@@ -108,7 +108,7 @@ In this case, the script will download all episodes starting from the first epis
 
 ## Batch Download
 
-### Usage
+### Usage no GUI
 
 1. Create a `URLs.txt` file in the project root and list the anime URLs you want to download.
 
@@ -126,8 +126,19 @@ https://www.animeunity.so/anime/2598-made-in-abyss
 2. Run the main script via the command line:
 
 ```bash
+python3 main.py --nogui
+```
+
+The downloaded files will be saved in the `Downloads` directory.
+
+### Usage with GUI
+1. Run the main script via the command line:
+
+```bash
 python3 main.py
 ```
+It will open a small window where you can paste links without limit.
+- The tabs are for starting another download of an anime simultaneously.
 
 ## File Download Location
 
