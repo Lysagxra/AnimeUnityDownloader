@@ -8,4 +8,3 @@ rich==14.1.0
 urllib3==1.26.20
 pyQt6
 aiohttp
-urllib3==2.5.0
