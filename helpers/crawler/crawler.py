@@ -13,7 +13,12 @@ from typing import TYPE_CHECKING
 
 import httpx
 
-from helpers.config import ANIME_NAME_PATTERN, CRAWLER_WORKERS, prepare_headers
+from helpers.config import (
+    ANIME_NAME_PATTERN,
+    BATCH_SIZE,
+    CRAWLER_WORKERS,
+    prepare_headers,
+)
 
 from .crawler_utils import (
     episode_in_range,
@@ -61,7 +66,7 @@ class Crawler:
 
     # Static methods
     @staticmethod
-    def extract_anime_name(soup: BeautifulSoup, url: str | None = None) -> str:
+    def extract_anime_name(soup: BeautifulSoup, url: str | None = None) -> str | None:
         """Extract the anime name from the provided BeautifulSoup object."""
         try:
             # First try the original method
@@ -92,7 +97,7 @@ class Crawler:
             return ""
 
         logging.error("Could not extract anime name from any source")
-        return ""
+        return None
 
     # Private methods
     def _get_num_episodes(self, timeout: int = 10) -> int:
@@ -124,28 +129,34 @@ class Crawler:
 
     async def _get_episode_ids(self) -> list[tuple[int, str]] | None:
         """Fetch the IDs of all the episodes from an API."""
-        max_batch = 120
+        episode_api_url = f"{self.api_url}/0"
         all_episode_infos = []
-        # Episode numbers start from 1
-        total_episodes = self.num_episodes + 1
-        for batch_start in range(1, total_episodes, max_batch):
-            batch_end = min(batch_start + max_batch - 1, total_episodes)
-            episode_api_url = f"{self.api_url}/0"
+        start_range = 0
+        end_range = self.num_episodes + 1
+
+        # To avoid request failures with very long series, we split the requests into
+        # batches of size <= BATCH_SIZE (120).
+        for batch_start in range(start_range, end_range, BATCH_SIZE):
+            batch_end = min(batch_start + BATCH_SIZE - 1, end_range)
             params = {
                 "start_range": batch_start,
                 "end_range": batch_end,
             }
+
+            # Perform the API request with retries and concurrency control
             response = await fetch_with_retries(
                 episode_api_url,
                 self.semaphore,
                 headers=HEADERS,
                 params=params,
             )
+
+            # Extract the list of episodes from the API response
             if response:
                 response_json = response.json()
                 episode_infos = response_json.get("episodes", [])
                 all_episode_infos.extend(episode_infos)
-        
+
         return [(info["id"], info["number"]) for info in all_episode_infos]
 
     async def _collect_episode_ids(self) -> list[str]:

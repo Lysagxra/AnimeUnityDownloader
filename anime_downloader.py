@@ -12,11 +12,10 @@ Usage:
 
 from __future__ import annotations
 
-import argparse
 import asyncio
-import logging
 import random
-from argparse import Namespace
+import logging
+from argparse import ArgumentParser, Namespace
 from pathlib import Path
 
 import aiohttp
@@ -102,6 +101,7 @@ async def process_anime_download(
     url: str,
     start_episode: int | None = None,
     end_episode: int | None = None,
+    custom_path: str | None = None,
 ) -> None:
     """Process the download of an anime from the specified URL."""
     soup = await fetch_page_httpx(url)
@@ -110,20 +110,39 @@ async def process_anime_download(
 
     try:
         anime_name = crawler.extract_anime_name(soup, url)
-        download_path = create_download_directory(anime_name)
+        download_path = create_download_directory(anime_name, custom_path=custom_path)
         await download_anime_async(anime_name, video_urls, download_path)
     except ValueError as val_err:
         logging.exception(f"Value error: {val_err}")
 
 
+def add_custom_path_argument(parser: ArgumentParser) -> None:
+    """Add the --custom-path argument to the provided argument parser."""
+    parser.add_argument(
+        "--custom-path",
+        type=str,
+        default=None,
+        help="The directory where the downloaded content will be saved.",
+    )
+
+
 def parse_arguments() -> Namespace:
     """Parse command-line arguments."""
-    parser = argparse.ArgumentParser(
-        description="Download anime episodes from a given URL."
-    )
+    parser = ArgumentParser(description="Download anime episodes from a given URL.")
     parser.add_argument("url", help="The URL of the Anime series to download.")
-    parser.add_argument("--start", type=int, default=None, help="The starting episode number.")
-    parser.add_argument("--end", type=int, default=None, help="The ending episode number.")
+    add_custom_path_argument(parser)
+    parser.add_argument(
+        "--start",
+        type=int,
+        default=None,
+        help="The starting episode number.",
+    )
+    parser.add_argument(
+        "--end",
+        type=int,
+        default=None,
+        help="The ending episode number.",
+    )
     return parser.parse_args()
 
 
@@ -131,7 +150,12 @@ async def main() -> None:
     """Execute the script to download anime episodes from a given AnimeUnity URL."""
     clear_terminal()
     args = parse_arguments()
-    await process_anime_download(args.url, start_episode=args.start, end_episode=args.end)
+    await process_anime_download(
+        args.url,
+        start_episode=args.start,
+        end_episode=args.end,
+        custom_path=args.custom_path,
+    )
 
 
 if __name__ == "__main__":

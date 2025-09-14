@@ -3,36 +3,56 @@ Main module of the project with PyQt6 GUI.
 
 This module provides a GUI to manage multiple sets of URLs in separate tabs.
 You can enter URLs in each tab, and start downloads independently.
-It uses the original async download functions.
+It also supports a CLI mode with --nogui, where it runs the downloader normally.
 """
+
+from __future__ import annotations
 
 import sys
 import asyncio
 import threading
+from argparse import ArgumentParser, Namespace
+
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QPushButton,
     QTextEdit, QTabWidget, QMessageBox, QMainWindow
 )
 
 # Import your existing functions
-from anime_downloader import process_anime_download
-from helpers.config import FILE
+from anime_downloader import add_custom_path_argument, process_anime_download
+from helpers.config import URLS_FILE
 from helpers.file_utils import read_file, write_file
 from helpers.general_utils import clear_terminal
 
 
-async def process_urls(urls: list[str]) -> None:
+def parse_arguments() -> Namespace:
+    """Parse only the --custom-path argument."""
+    parser = ArgumentParser(description="Download anime series from a list of URLs.")
+    add_custom_path_argument(parser)
+    parser.add_argument(
+        "--nogui",
+        action="store_true",
+        help="Run without GUI (terminal mode).",
+    )
+    return parser.parse_args()
+
+
+async def process_urls(urls: list[str], custom_path: str | None = None) -> None:
     """Validate and download items for a list of URLs."""
     for url in urls:
-        await process_anime_download(url)
+        await process_anime_download(url, custom_path=custom_path)
 
 
-async def main() -> None:
-    """Run the script from file (non-GUI mode)."""
+async def main(custom_path: str | None = None) -> None:
+    """Run the script in non-GUI mode."""
     clear_terminal()
-    urls = read_file(FILE)
-    await process_urls(urls)
-    write_file(FILE)
+
+    # Read and process URLs, ignoring empty lines
+    urls = [url.strip() for url in read_file(URLS_FILE) if url.strip()]
+    await process_urls(urls, custom_path=custom_path)
+
+    # Clear URLs file
+    write_file(URLS_FILE)
 
 
 def run_asyncio(coro):
@@ -89,9 +109,10 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] == "--nogui":
-        # Run original script logic without GUI
-        asyncio.run(main())
+    args = parse_arguments()
+
+    if args.nogui:
+        asyncio.run(main(custom_path=args.custom_path))
     else:
         app = QApplication(sys.argv)
         win = MainWindow()
