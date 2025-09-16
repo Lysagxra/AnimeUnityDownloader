@@ -2,7 +2,7 @@
 
 > A Python-based tool for downloading anime series from AnimeUnity, featuring progress tracking for each episode. It efficiently extracts video URLs and manages downloads.
 
-![Screenshot](https://github.com/Lysagxra/AnimeUnityDownloader/blob/660079e23bc16e8b1996b463e213aecbb1a56294/misc/Screenshot.png)
+![Demo](https://github.com/Lysagxra/AnimeUnityDownloader/blob/8e274bdfb71f8fc714fa02322ec2b3eda61cce53/assets/demo.png)
 
 ## Features
 
