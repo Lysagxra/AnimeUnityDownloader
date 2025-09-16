@@ -14,9 +14,9 @@ from __future__ import annotations
 import asyncio
 
 from anime_downloader import parse_arguments, process_anime_download
-from helpers.config import URLS_FILE
-from helpers.file_utils import read_file, write_file
-from helpers.general_utils import clear_terminal
+from src.config import URLS_FILE
+from src.file_utils import read_file, write_file
+from src.general_utils import clear_terminal
 
 
 async def process_urls(urls: list[str], custom_path: str | None = None) -> None:

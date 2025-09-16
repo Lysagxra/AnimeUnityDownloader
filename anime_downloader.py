@@ -19,17 +19,17 @@ from pathlib import Path
 import requests
 from rich.live import Live
 
-from helpers.config import parse_arguments, prepare_headers
-from helpers.crawler.crawler import Crawler
-from helpers.crawler.crawler_utils import extract_download_link
-from helpers.download_utils import (
+from src.config import parse_arguments, prepare_headers
+from src.crawler.crawler import Crawler
+from src.crawler.crawler_utils import extract_download_link
+from src.download_utils import (
     get_episode_filename,
     run_in_parallel,
     save_file_with_progress,
 )
-from helpers.file_utils import create_download_directory
-from helpers.general_utils import clear_terminal, fetch_page, fetch_page_httpx
-from helpers.progress_utils import create_progress_bar, create_progress_table
+from src.file_utils import create_download_directory
+from src.general_utils import clear_terminal, fetch_page, fetch_page_httpx
+from src.progress_utils import create_progress_bar, create_progress_table
 
 
 def download_episode(
