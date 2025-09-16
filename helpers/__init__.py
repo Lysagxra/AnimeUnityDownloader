@@ -14,7 +14,7 @@ This package is designed to be reusable and modular, allowing its components
 to be easily imported and used across different parts of the application.
 """
 
-# helpers/__init__.py
+# src/__init__.py
 
 __all__ = [
     "config",

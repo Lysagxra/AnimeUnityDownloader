@@ -12,19 +12,11 @@ Usage:
 from __future__ import annotations
 
 import asyncio
-from argparse import ArgumentParser, Namespace
 
-from anime_downloader import add_custom_path_argument, process_anime_download
+from anime_downloader import parse_arguments, process_anime_download
 from helpers.config import URLS_FILE
 from helpers.file_utils import read_file, write_file
 from helpers.general_utils import clear_terminal
-
-
-def parse_arguments() -> Namespace:
-    """Parse only the --custom-path argument."""
-    parser = ArgumentParser(description="Download anime series from a list of URLs.")
-    add_custom_path_argument(parser)
-    return parser.parse_args()
 
 
 async def process_urls(urls: list[str], custom_path: str | None = None) -> None:
@@ -37,7 +29,7 @@ async def main() -> None:
     """Run the script."""
     # Clear terminal and parse arguments
     clear_terminal()
-    args = parse_arguments()
+    args = parse_arguments(common_only=True)
 
     # Read and process URLs, ignoring empty lines
     urls = [url.strip() for url in read_file(URLS_FILE) if url.strip()]

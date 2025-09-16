@@ -1,7 +1,7 @@
 """Module to download anime episodes from a given AnimeUnity URL.
 
-It extracts the anime ID, formats the anime name, retrieves episode IDs and
-URLs, and downloads episodes concurrently.
+It extracts the anime ID, formats the anime name, retrieves episode URLs, and
+downloads episodes concurrently.
 
 Usage:
     - Run the script with the URL of the anime page as a command-line argument.
@@ -14,13 +14,12 @@ from __future__ import annotations
 import asyncio
 import random
 import time
-from argparse import ArgumentParser, Namespace
 from pathlib import Path
 
 import requests
 from rich.live import Live
 
-from helpers.config import prepare_headers
+from helpers.config import parse_arguments, prepare_headers
 from helpers.crawler.crawler import Crawler
 from helpers.crawler.crawler_utils import extract_download_link
 from helpers.download_utils import (
@@ -28,12 +27,8 @@ from helpers.download_utils import (
     run_in_parallel,
     save_file_with_progress,
 )
-from helpers.general_utils import (
-    clear_terminal,
-    create_download_directory,
-    fetch_page,
-    fetch_page_httpx,
-)
+from helpers.file_utils import create_download_directory
+from helpers.general_utils import clear_terminal, fetch_page, fetch_page_httpx
 from helpers.progress_utils import create_progress_bar, create_progress_table
 
 
@@ -93,41 +88,10 @@ async def process_anime_download(
     """Process the download of an anime from the specified URL."""
     soup = fetch_page_httpx(url)
     crawler = Crawler(url=url, start_episode=start_episode, end_episode=end_episode)
-    video_urls = await crawler.collect_video_urls()
-
     anime_name = crawler.extract_anime_name(soup, url)
     download_path = create_download_directory(anime_name, custom_path=custom_path)
+    video_urls = await crawler.collect_video_urls()
     download_anime(anime_name, video_urls, download_path)
-
-
-def add_custom_path_argument(parser: ArgumentParser) -> None:
-    """Add the --custom-path argument to the provided argument parser."""
-    parser.add_argument(
-        "--custom-path",
-        type=str,
-        default=None,
-        help="The directory where the downloaded content will be saved.",
-    )
-
-
-def parse_arguments() -> Namespace:
-    """Parse command-line arguments."""
-    parser = ArgumentParser(description="Download anime episodes from a given URL.")
-    parser.add_argument("url", help="The URL of the Anime series to download.")
-    add_custom_path_argument(parser)
-    parser.add_argument(
-        "--start",
-        type=int,
-        default=None,
-        help="The starting episode number.",
-    )
-    parser.add_argument(
-        "--end",
-        type=int,
-        default=None,
-        help="The ending episode number.",
-    )
-    return parser.parse_args()
 
 
 async def main() -> None:

@@ -187,7 +187,7 @@ async def fetch_with_retries(
                     await retry_or_fallback(attempt, min_delay=1.0, max_delay=3.0)
 
                 elif attempt < retries - 1:
-                    delay = 2 ** attempt + random.uniform(0, 2)  # noqa: S311
+                    delay = 2 ** attempt + random.uniform(1, 2)  # noqa: S311
                     await asyncio.sleep(delay)
 
             except httpx.RequestError:

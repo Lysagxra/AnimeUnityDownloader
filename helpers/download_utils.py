@@ -31,7 +31,7 @@ def get_episode_filename(download_link: str) -> str | None:
     if download_link:
         try:
             filename = unquote(download_link.split("=")[-1])  # Original name
-            return remove_special_characters(filename)  # Cleaned name
+            return remove_special_characters(filename)        # Cleaned name
 
         except IndexError as indx_err:
             message = f"Error while extracting the file name: {indx_err}"
@@ -92,7 +92,6 @@ def run_in_parallel(
         overall_task = job_progress.add_task(
             f"[{TASK_COLOR}]Progress", total=num_items, visible=True,
         )
-
         for indx, item in enumerate(items):
             task = job_progress.add_task(
                 f"[{TASK_COLOR}]Episode {indx + 1}/{num_items}",

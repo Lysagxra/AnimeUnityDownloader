@@ -4,6 +4,8 @@ These configurations aim to improve modularity and readability by consolidating 
 into a single location.
 """
 
+from argparse import ArgumentParser, Namespace
+
 from fake_useragent import UserAgent
 
 # ============================
@@ -96,8 +98,55 @@ ENCODING_HEADERS = {
 USER_AGENT_ROTATOR = UserAgent()
 
 
-# Helper functions
 def prepare_headers() -> dict[str, str]:
     """Prepare a random HTTP headers with a user-agent string for making requests."""
     user_agent = str(USER_AGENT_ROTATOR.firefox)
     return {"User-Agent": user_agent}
+
+# ============================
+# Argument Parsing
+# ============================
+def add_common_arguments(parser: ArgumentParser) -> None:
+    """Add arguments shared across parsers."""
+    parser.add_argument(
+        "--custom-path",
+        type=str,
+        default=None,
+        help="The directory where the downloaded content will be saved.",
+    )
+
+
+def setup_parser(
+        *, include_url: bool = False, include_filters: bool = False,
+    ) -> ArgumentParser:
+    """Set up parser with optional argument groups."""
+    parser = ArgumentParser(description="Command-line arguments.")
+
+    if include_url:
+        parser.add_argument("url", type=str, help="The URL to process")
+
+    if include_filters:
+        parser.add_argument(
+            "--start",
+            type=int,
+            default=None,
+            help="The starting episode number.",
+        )
+        parser.add_argument(
+            "--end",
+            type=int,
+            default=None,
+            help="The ending episode number.",
+        )
+
+    add_common_arguments(parser)
+    return parser
+
+
+def parse_arguments(*, common_only: bool = False) -> Namespace:
+    """Full argument parser (including URL, filters, and common)."""
+    parser = (
+        setup_parser() if common_only
+        else setup_parser(include_url=True, include_filters=True)
+    )
+    return parser.parse_args()
