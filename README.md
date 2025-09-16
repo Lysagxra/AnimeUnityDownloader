@@ -22,11 +22,9 @@
 - `fake_useragent` - for generating fake user agents for web scraping
 - `httpx` - for making asynchronous HTTP requests
 
-## Directory Structure
-
 <details>
 
-<summary>Expand Directory Structure</summary>
+<summary>Expand directory structure</summary>
 
 ```
 project-root/
