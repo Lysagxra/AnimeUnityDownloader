@@ -24,7 +24,7 @@
 
 <details>
 
-<summary>Expand directory structure</summary>
+<summary>Show directory structure</summary>
 
 ```
 project-root/
