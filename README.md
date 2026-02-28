@@ -105,11 +105,13 @@ python3 anime_downloader.py https://www.animeunity.so/anime/1517-yuru-yuri --end
 ```
 In this case, the script will download all episodes starting from the first episode to the `--end` episode.
 
-To download only specific episodes (e.g., episodes 3, 7, 12, and 15) add the --episodes flag and the list of episodes separated by comma or space or both
+To download only specific episodes (e.g., episodes 3, 7, 12, and 15) add the `--episodes` flag and the list of episodes separated by comma or space or both
+
 ```bash
 python3 anime_downloader.py https://www.animeunity.so/anime/1517-yuru-yuri --episodes 3,7,12,15
 python3 anime_downloader.py https://www.animeunity.so/anime/1517-yuru-yuri --episodes 3 7 12 15
 ```
+
 This is useful when you already have some episodes and only need to download the missing ones, avoiding re-downloading an entire range.
 
 ## Batch Download
