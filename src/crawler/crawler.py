@@ -39,6 +39,7 @@ def _safe_float(value: str) -> float | None:
     """Convert a string to float, returning None if conversion fails."""
     try:
         return float(value)
+
     except (ValueError, TypeError):
         return None
 
@@ -56,7 +57,6 @@ class Crawler:
         start_episode: int | None,
         end_episode: int | None,
         episodes: list[int] | None = None,
-        max_workers: int = CRAWLER_WORKERS,
     ) -> None:
         """Initialize the crawler."""
         self.host_domain = extract_host_domain(url)
@@ -65,7 +65,7 @@ class Crawler:
         self.start_episode = start_episode
         self.end_episode = end_episode
         self.episodes = episodes
-        self.semaphore = asyncio.Semaphore(max_workers)
+        self.semaphore = asyncio.Semaphore(CRAWLER_WORKERS)
 
     async def collect_video_urls(self) -> list[str]:
         """Collect a list of video URLs by concurrently fetching each embed URL."""
@@ -173,12 +173,13 @@ class Crawler:
         """Retrieve a list of episode IDs from a given URL."""
         episodes = await self._get_episode_ids()
         if self.episodes:
-            episodes_set = {float(ep) for ep in self.episodes}
+            episodes_set = {float(episode) for episode in self.episodes}
             return [
                 episode[0]
                 for episode in episodes
                 if _safe_float(episode[1]) in episodes_set
             ]
+
         validate_episode_range(self.start_episode, self.end_episode, self.num_episodes)
         return [
             episode[0]
