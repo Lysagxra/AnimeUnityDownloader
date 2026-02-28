@@ -138,6 +138,15 @@ def setup_parser(
             default=None,
             help="The ending episode number.",
         )
+        parser.add_argument(
+            "--episodes",
+            nargs="+",
+            default=None,
+            help=(
+                "Specific episode numbers to download. "
+                "Example: --episodes 1,3,7,12 or --episodes 1 3 7 12"
+            ),
+        )
 
     add_common_arguments(parser)
     return parser
