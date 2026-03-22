@@ -35,6 +35,15 @@ if TYPE_CHECKING:
 HEADERS = prepare_headers()
 
 
+def _safe_float(value: str) -> float | None:
+    """Convert a string to float, returning None if conversion fails."""
+    try:
+        return float(value)
+
+    except (ValueError, TypeError):
+        return None
+
+
 class Crawler:
     """class responsible for crawling an anime.
 
@@ -47,7 +56,7 @@ class Crawler:
         url: str,
         start_episode: int | None,
         end_episode: int | None,
-        max_workers: int = CRAWLER_WORKERS,
+        episodes: list[int] | None = None,
     ) -> None:
         """Initialize the crawler."""
         self.host_domain = extract_host_domain(url)
@@ -55,7 +64,8 @@ class Crawler:
         self.num_episodes = self._get_num_episodes()
         self.start_episode = start_episode
         self.end_episode = end_episode
-        self.semaphore = asyncio.Semaphore(max_workers)
+        self.episodes = episodes
+        self.semaphore = asyncio.Semaphore(CRAWLER_WORKERS)
 
     async def collect_video_urls(self) -> list[str]:
         """Collect a list of video URLs by concurrently fetching each embed URL."""
@@ -161,9 +171,18 @@ class Crawler:
 
     async def _collect_episode_ids(self) -> list[str]:
         """Retrieve a list of episode IDs from a given URL."""
-        validate_episode_range(self.start_episode, self.end_episode, self.num_episodes)
-
         episodes = await self._get_episode_ids()
+        if self.episodes:
+            episodes_set = {float(episode) for episode in self.episodes}
+            return [
+                episode[0]
+                for episode in episodes
+                if _safe_float(episode[1]) in episodes_set
+            ]
+
+        validate_episode_range(self.start_episode, self.end_episode, self.num_episodes)
+        episodes = await self._get_episode_ids()
+
         return [
             episode[0]
             for episode in episodes
