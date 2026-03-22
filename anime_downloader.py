@@ -83,47 +83,25 @@ async def process_anime_download(
     url: str,
     start_episode: int | None = None,
     end_episode: int | None = None,
-    episodes: list[int] | None = None,
     custom_path: str | None = None,
 ) -> None:
     """Process the download of an anime from the specified URL."""
     soup = fetch_page_httpx(url)
-    crawler = Crawler(
-        url=url,
-        start_episode=start_episode,
-        end_episode=end_episode,
-        episodes=episodes,
-    )
+    crawler = Crawler(url=url, start_episode=start_episode, end_episode=end_episode)
     anime_name = crawler.extract_anime_name(soup, url)
     download_path = create_download_directory(anime_name, custom_path=custom_path)
     video_urls = await crawler.collect_video_urls()
     download_anime(anime_name, video_urls, download_path)
 
 
-def parse_episodes_list(episodes_raw: list[str] | None) -> list[int] | None:
-    """Parse episode tokens into a sorted list of ints.
-
-    Accepts tokens like ['1,3,7,12'] or ['1,', '3,', '7', '12'] or ['1', '3', '7'].
-    """
-    if episodes_raw is None:
-        return None
-
-    merged = ",".join(episodes_raw)
-    return sorted(
-        int(episode.strip()) for episode in merged.split(",") if episode.strip()
-    )
-
-
 async def main() -> None:
     """Execute the script to download anime episodes from a given AnimeUnity URL."""
     clear_terminal()
     args = parse_arguments()
-    episodes = parse_episodes_list(args.episodes)
     await process_anime_download(
         args.url,
         start_episode=args.start,
         end_episode=args.end,
-        episodes=episodes,
         custom_path=args.custom_path,
     )
 

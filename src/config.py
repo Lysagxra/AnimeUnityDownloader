@@ -8,6 +8,8 @@ from argparse import ArgumentParser, Namespace
 
 from fake_useragent import UserAgent
 
+from .version import get_version_string
+
 # ============================
 # Paths and Files
 # ============================
@@ -114,6 +116,12 @@ def add_common_arguments(parser: ArgumentParser) -> None:
         default=None,
         help="The directory where the downloaded content will be saved.",
     )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=get_version_string(),
+        help="Show program's version and exit.",
+    )
 
 
 def setup_parser(
@@ -137,15 +145,6 @@ def setup_parser(
             type=int,
             default=None,
             help="The ending episode number.",
-        )
-        parser.add_argument(
-            "--episodes",
-            nargs="+",
-            default=None,
-            help=(
-                "Specific episode numbers to download. "
-                "Example: --episodes 1,3,7,12 or --episodes 1 3 7 12"
-            ),
         )
 
     add_common_arguments(parser)
