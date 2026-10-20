@@ -205,7 +205,7 @@ def extract_download_link(script_items: list, video_url: str) -> str | None:
         if match:
             return match.group(1)
 
-    # Return None if no download link is found
-    message = f"Error extracting the download link for {video_url}"
-    logging.error(message)
+    # Return None if no download link is found, callers can fall back to HLS
+    message = f"No direct download link for {video_url}, falling back to HLS"
+    logging.info(message)
     return None

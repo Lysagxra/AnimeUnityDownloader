@@ -69,10 +69,20 @@ class Crawler:
 
     async def collect_video_urls(self) -> list[str]:
         """Collect a list of video URLs by concurrently fetching each embed URL."""
-        episode_ids = await self._collect_episode_ids()
+        episodes = await self.collect_episodes()
+        return [video_url for _, video_url in episodes]
+
+    async def collect_episodes(self) -> list[tuple[str, str | None]]:
+        """Collect (episode number, video URL) pairs for the selected episodes."""
+        episodes = await self._collect_episode_ids()
+        episode_ids = [episode_id for episode_id, _ in episodes]
         embed_urls = self._generate_episode_embed_urls(episode_ids)
         tasks = [self._get_video_url(embed_url) for embed_url in embed_urls]
-        return await asyncio.gather(*tasks)
+        video_urls = await asyncio.gather(*tasks)
+        return [
+            (str(number), video_url)
+            for (_, number), video_url in zip(episodes, video_urls)  # noqa: B905
+        ]
 
     # Static methods
     @staticmethod
@@ -169,13 +179,13 @@ class Crawler:
 
         return [(info["id"], info["number"]) for info in all_episode_infos]
 
-    async def _collect_episode_ids(self) -> list[str]:
-        """Retrieve a list of episode IDs from a given URL."""
+    async def _collect_episode_ids(self) -> list[tuple[int, str]]:
+        """Retrieve (episode ID, episode number) pairs from a given URL."""
         episodes = await self._get_episode_ids()
         if self.episodes:
             episodes_set = {float(episode) for episode in self.episodes}
             return [
-                episode[0]
+                episode
                 for episode in episodes
                 if _safe_float(episode[1]) in episodes_set
             ]
@@ -184,7 +194,7 @@ class Crawler:
         episodes = await self._get_episode_ids()
 
         return [
-            episode[0]
+            episode
             for episode in episodes
             if episode_in_range(episode[1], self.start_episode, self.end_episode)
         ]
