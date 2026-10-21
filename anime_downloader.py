@@ -12,6 +12,7 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import logging
 import random
 import time
 from pathlib import Path
@@ -24,11 +25,13 @@ from src.crawler.crawler import Crawler
 from src.crawler.crawler_utils import extract_download_link
 from src.download_utils import (
     get_episode_filename,
+    remove_special_characters,
     run_in_parallel,
     save_file_with_progress,
 )
 from src.file_utils import create_download_directory
 from src.general_utils import clear_terminal, fetch_page, fetch_page_httpx
+from src.hls_utils import download_hls_episode
 from src.progress_utils import create_progress_bar, create_progress_table
 
 
@@ -62,21 +65,44 @@ def download_episode(
             break
 
 
-def process_video_url(video_url: str, download_path: str, task_info: tuple) -> None:
+def get_hls_episode_filename(download_path: str, episode_number: str) -> str:
+    """Build the file name of an episode downloaded from its HLS stream."""
+    anime_name = remove_special_characters(Path(download_path).name.replace(" ", "_"))
+    return f"{anime_name}_Ep_{episode_number.zfill(2)}.mp4"
+
+
+def process_video_url(
+    episode: tuple[str, str | None], download_path: str, task_info: tuple,
+) -> None:
     """Process an embed URL to extract episode download links."""
+    episode_number, video_url = episode
+    if video_url is None:
+        logging.error("Missing embed URL for episode %s", episode_number)
+        return
+
     soup = fetch_page(video_url)
     script_items = soup.find_all("script")
     download_link = extract_download_link(script_items, video_url)
-    download_episode(download_link, download_path, task_info)
+
+    if download_link:
+        download_episode(download_link, download_path, task_info)
+        return
+
+    # No direct link is exposed for this episode, download it from its HLS stream
+    filename = get_hls_episode_filename(download_path, episode_number)
+    final_path = Path(download_path) / filename
+    download_hls_episode(script_items, video_url, final_path, task_info)
 
 
-def download_anime(anime_name: str, video_urls: list[str], download_path: str) -> None:
+def download_anime(
+    anime_name: str, episodes: list[tuple[str, str | None]], download_path: str,
+) -> None:
     """Download episodes of a specified anime from provided video URLs."""
     job_progress = create_progress_bar()
     progress_table = create_progress_table(anime_name, job_progress)
 
     with Live(progress_table, refresh_per_second=10):
-        run_in_parallel(process_video_url, video_urls, job_progress, download_path)
+        run_in_parallel(process_video_url, episodes, job_progress, download_path)
 
 
 async def process_anime_download(
@@ -96,8 +122,8 @@ async def process_anime_download(
     )
     anime_name = crawler.extract_anime_name(soup, url)
     download_path = create_download_directory(anime_name, custom_path=custom_path)
-    video_urls = await crawler.collect_video_urls()
-    download_anime(anime_name, video_urls, download_path)
+    episodes = await crawler.collect_episodes()
+    download_anime(anime_name, episodes, download_path)
 
 
 def parse_episodes_list(episodes_raw: list[str] | None) -> list[int] | None:

@@ -23,6 +23,12 @@ URLS_FILE = "URLs.txt"         # The file containing URLs to process.
 DOWNLOAD_LINK_PATTERN = r"window\.downloadUrl\s*=\s*'(https?:\/\/[^\s']+)'"
 ANIME_NAME_PATTERN = r"/anime/\d+-(.+)$"
 
+# Regex patterns to rebuild the HLS master playlist URL when no direct link is exposed
+HLS_PLAYLIST_URL_PATTERN = r"url:\s*'(https?:\/\/[^\s']+\/playlist\/[^\s']+)'"
+HLS_TOKEN_PATTERN = r"'token':\s*'([^']+)'"  # noqa: S105
+HLS_EXPIRES_PATTERN = r"'expires':\s*'([^']+)'"
+HLS_CAN_PLAY_FHD_PATTERN = r"window\.canPlayFHD\s*=\s*true"
+
 # ============================
 # Download Settings
 # ============================
