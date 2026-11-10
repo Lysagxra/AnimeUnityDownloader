@@ -22,6 +22,7 @@ import urllib3
 from brotli import error as BrotliError  # noqa: N812
 from bs4 import BeautifulSoup
 from cloudscraper import CloudScraper
+from urllib.parse import urlparse
 
 from .config import (
     DEFAULT_HEADERS,
@@ -127,6 +128,7 @@ def fetch_page(url: str, timeout: int = 10) -> BeautifulSoup:
     # Add additional headers to look more like a real browser
     headers = prepare_headers()
     headers.update(DEFAULT_HEADERS)
+    headers["Referer"] = f"https://{urlparse(url).netloc}/"
 
     try:
         # First attempt: normal request
