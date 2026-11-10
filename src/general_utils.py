@@ -13,6 +13,7 @@ import os
 import random
 import sys
 import time
+from urllib.parse import urlparse
 
 import brotli
 import cloudscraper
@@ -22,7 +23,6 @@ import urllib3
 from brotli import error as BrotliError  # noqa: N812
 from bs4 import BeautifulSoup
 from cloudscraper import CloudScraper
-from urllib.parse import urlparse
 
 from .config import (
     DEFAULT_HEADERS,
