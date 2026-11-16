@@ -52,8 +52,6 @@ def prepare_cloudscraper_session() -> CloudScraper:
         },
     )
 
-    # Disable SSL verification
-    scraper.verify = False
     return scraper
 
 

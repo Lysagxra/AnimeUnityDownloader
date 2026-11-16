@@ -16,13 +16,13 @@ import logging
 import random
 import time
 from pathlib import Path
+from urllib.parse import urlparse
 
 import requests
 from rich.live import Live
 
-from src.config import parse_arguments, prepare_headers
+from src.config import DEFAULT_LANGUAGE, DOWNLOAD_QUALITIES, parse_arguments
 from src.crawler.crawler import Crawler
-from src.crawler.crawler_utils import extract_download_link
 from src.download_utils import (
     get_episode_filename,
     remove_special_characters,
@@ -30,38 +30,78 @@ from src.download_utils import (
     save_file_with_progress,
 )
 from src.file_utils import create_download_directory
-from src.general_utils import clear_terminal, fetch_page, fetch_page_httpx
-from src.hls_utils import download_hls_episode
+from src.general_utils import (
+    clear_terminal,
+    fetch_page_httpx,
+    prepare_cloudscraper_session,
+)
 from src.progress_utils import create_progress_bar, create_progress_table
 
 
 def download_episode(
     download_link: str,
     download_path: str,
+    episode_number: str,
     task_info: tuple,
     retries: int = 4,
 ) -> None:
-    """Download an episode from the download link and provides progress updates."""
+    """Download an episode from /episode-videos/{id}/download with quality fallback."""
+
     for attempt in range(retries):
         try:
-            headers = prepare_headers()
-            response = requests.get(
-                download_link,
-                stream=True,
-                headers=headers,
-                timeout=10,
-            )
-            response.raise_for_status()
+            scraper = prepare_cloudscraper_session()
+            headers = {
+                "Accept":
+                    "text/html,application/xhtml+xml,application/xml;q=0.9,video/mp4,*/*;q=0.8",
+                "Referer":
+                    f"{urlparse(download_link).scheme}://{urlparse(download_link).netloc}/",
+            }
 
-        except requests.RequestException:
+            response = None
+            for quality in DOWNLOAD_QUALITIES:
+                res = scraper.get(
+                    f"{download_link}?quality={quality}",
+                    stream=True,
+                    headers=headers,
+                    timeout=20,
+                    allow_redirects=True,
+                )
+                content_type = res.headers.get("Content-Type", "").lower()
+                if res.status_code == 200 and "text/html" not in content_type:
+                    response = res
+                    break
+                logging.warning(
+                    "Episode %s (%sp) returned status %s (%s)",
+                    episode_number,
+                    quality,
+                    res.status_code,
+                    content_type,
+                )
+                res.close()
+
+            if response is None:
+                raise requests.RequestException(
+                    f"No valid MP4 stream found for episode {episode_number}"
+                )
+
+        except requests.RequestException as req_err:
+            logging.warning(
+                "Attempt %d/%d failed for episode %s: %s",
+                attempt + 1,
+                retries,
+                episode_number,
+                req_err,
+            )
             if attempt < retries - 1:
-                delay = 10 * (attempt + 1) + random.uniform(1, 2)  # noqa: S311
-                time.sleep(delay)
+                time.sleep(10 * (attempt + 1) + random.uniform(1, 2)) # noqa: S311
 
         else:
-            filename = get_episode_filename(download_link)
-            final_path = Path(download_path) / filename
-            save_file_with_progress(response, final_path, task_info)
+            with response:
+                filename = (
+                    get_episode_filename(download_link, response)
+                    or get_hls_episode_filename(download_path, episode_number)
+                )
+                save_file_with_progress(response, Path(download_path) / filename, task_info)
             break
 
 
@@ -74,24 +114,13 @@ def get_hls_episode_filename(download_path: str, episode_number: str) -> str:
 def process_video_url(
     episode: tuple[str, str | None], download_path: str, task_info: tuple,
 ) -> None:
-    """Process an embed URL to extract episode download links."""
+    """Download an episode from its direct download endpoint."""
     episode_number, video_url = episode
     if video_url is None:
-        logging.error("Missing embed URL for episode %s", episode_number)
+        logging.error("Missing download URL for episode %s", episode_number)
         return
 
-    soup = fetch_page(video_url)
-    script_items = soup.find_all("script")
-    download_link = extract_download_link(script_items, video_url)
-
-    if download_link:
-        download_episode(download_link, download_path, task_info)
-        return
-
-    # No direct link is exposed for this episode, download it from its HLS stream
-    filename = get_hls_episode_filename(download_path, episode_number)
-    final_path = Path(download_path) / filename
-    download_hls_episode(script_items, video_url, final_path, task_info)
+    download_episode(video_url, download_path, episode_number, task_info)
 
 
 def download_anime(
@@ -107,18 +136,19 @@ def download_anime(
 
 async def process_anime_download(
     url: str,
-    start_episode: int | None = None,
-    end_episode: int | None = None,
+    episodes_range: tuple = (None, None),
     episodes: list[int] | None = None,
     custom_path: str | None = None,
+    language: str = DEFAULT_LANGUAGE,
 ) -> None:
     """Process the download of an anime from the specified URL."""
     soup = fetch_page_httpx(url)
     crawler = Crawler(
         url=url,
-        start_episode=start_episode,
-        end_episode=end_episode,
+        episodes_range=episodes_range,
         episodes=episodes,
+        soup=soup,
+        language=language,
     )
     anime_name = crawler.extract_anime_name(soup, url)
     download_path = create_download_directory(anime_name, custom_path=custom_path)
@@ -147,8 +177,7 @@ async def main() -> None:
     episodes = parse_episodes_list(args.episodes)
     await process_anime_download(
         args.url,
-        start_episode=args.start,
-        end_episode=args.end,
+        episodes_range=(args.start, args.end),
         episodes=episodes,
         custom_path=args.custom_path,
     )
