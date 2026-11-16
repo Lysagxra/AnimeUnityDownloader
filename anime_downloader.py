@@ -53,9 +53,7 @@ def download_episode(
     """Download an episode from /episode-videos/{id}/download with quality fallback."""
     parsed_download_link = urlparse(download_link)
     headers = {
-        "Accept": (
-            "text/html,application/xhtml+xml,application/xml;q=0.9,video/mp4,*/*;q=0.8",
-        ),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,video/mp4,*/*;q=0.8",
         "Referer": f"{parsed_download_link.scheme}://{parsed_download_link.netloc}/",
     }
 
