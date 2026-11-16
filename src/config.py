@@ -36,6 +36,8 @@ TASK_COLOR = "cyan"   # The color to be used for task-related messages.
 BATCH_SIZE = 120      # The maximum number of episodes the API allows per request.
 CRAWLER_WORKERS = 8   # The maximum number of worker threads for crawling tasks.
 DOWNLOAD_WORKERS = 2  # The maximum number of worker threads for downloading tasks.
+DOWNLOAD_QUALITIES = (1080, 720, 480)
+DEFAULT_LANGUAGE = "jpn"
 
 # Constants for file sizes, expressed in bytes
 KB = 1024
@@ -160,6 +162,12 @@ def setup_parser(
                 "Specific episode numbers to download. "
                 "Example: --episodes 1,3,7,12 or --episodes 1 3 7 12"
             ),
+        )
+        parser.add_argument(
+            "--lang",
+            type=str,
+            default=DEFAULT_LANGUAGE,
+            help="Preferred audio language track (e.g., jpn, ita).",
         )
 
     add_common_arguments(parser)
