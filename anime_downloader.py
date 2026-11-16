@@ -91,8 +91,9 @@ def download_episode(
                 res.close()
 
             if response is None:
-                msg = f"No valid MP4 stream found for episode {episode_number}"
-                raise requests.RequestException(msg)
+                pass
+#                msg = f"No valid MP4 stream found for episode {episode_number}"
+#                raise requests.RequestException(msg)
 
         except requests.RequestException as req_err:
             logging.warning(
