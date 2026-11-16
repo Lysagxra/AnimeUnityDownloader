@@ -7,6 +7,7 @@ URLs from a web page.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import random
 import re
@@ -27,7 +28,7 @@ from src.config import (
 from src.general_utils import prepare_cloudscraper_session
 
 if TYPE_CHECKING:
-    from bs4 import Tag
+    from bs4 import BeautifulSoup, Tag
     from requests import Response
 
 
@@ -209,3 +210,15 @@ def extract_download_link(script_items: list, video_url: str) -> str | None:
     message = f"No direct download link for {video_url}, falling back to HLS"
     logging.info(message)
     return None
+
+
+def extract_inertia_props(soup: BeautifulSoup) -> dict:
+    """Extract and parse the Inertia.js data-page JSON payload from the page."""
+    app_node = soup.find(id="app")
+    if app_node is None or not app_node.has_attr("data-page"):
+        message = "Could not find Inertia data-page attribute in page HTML."
+        logging.error(message)
+        sys.exit(1)
+
+    page_data = json.loads(app_node["data-page"])
+    return page_data.get("props", {})

@@ -26,16 +26,33 @@ def remove_special_characters(input_string: str) -> str:
     return re.sub(r"[^a-zA-Z0-9_.-]", "", input_string)
 
 
-def get_episode_filename(download_link: str) -> str | None:
-    """Extract the file name from the provided episode download link."""
-    if download_link:
-        try:
-            filename = unquote(download_link.split("=")[-1])  # Original name
-            return remove_special_characters(filename)        # Cleaned name
+def get_episode_filename(
+    download_link: str,
+    response: Response | None = None,
+) -> str | None:
+    """Extract a sanitized .mp4 filename from response headers or URL."""
+    if response is not None:
+        disposition = response.headers.get("Content-Disposition", "")
+        match = re.search(
+            r'filename\*?=(?:UTF-8\'\')?"?([^";]+)"?',
+            disposition,
+            re.IGNORECASE,
+        )
+        if match:
+            cleaned = remove_special_characters(unquote(match.group(1).strip()))
+            if cleaned.lower().endswith(".mp4"):
+                return cleaned
 
-        except IndexError as indx_err:
-            message = f"Error while extracting the file name: {indx_err}"
-            logging.exception(message)
+        final_path_name = unquote(response.url.split("?")[0].rstrip("/").split("/")[-1])
+        cleaned_url_name = remove_special_characters(final_path_name)
+        if cleaned_url_name.lower().endswith(".mp4"):
+            return cleaned_url_name
+
+    if download_link and "=" in download_link:
+        filename = unquote(download_link.split("=")[-1])
+        cleaned = remove_special_characters(filename)
+        if cleaned.lower().endswith(".mp4"):
+            return cleaned
 
     return None
 
@@ -65,8 +82,9 @@ def save_file_with_progress(
             if chunk:
                 file.write(chunk)
                 total_downloaded += len(chunk)
-                progress_percentage = (total_downloaded / file_size) * 100
-                job_progress.update(task, completed=progress_percentage)
+                if file_size > 0:
+                    progress_percentage = (total_downloaded / file_size) * 100
+                    job_progress.update(task, completed=progress_percentage)
 
     job_progress.update(task, completed=100, visible=False)
     job_progress.advance(overall_task)
@@ -87,6 +105,7 @@ def run_in_parallel(
     """Execute a function in parallel for a list of items, updating progress."""
     num_items = len(items)
     futures = {}
+    all_futures = []
 
     with ThreadPoolExecutor(max_workers=DOWNLOAD_WORKERS) as executor:
         overall_task = job_progress.add_task(
@@ -101,4 +120,10 @@ def run_in_parallel(
             task_info = (job_progress, task, overall_task)
             future = executor.submit(func, item, *args, task_info)
             futures[future] = task
+            all_futures.append(future)
             manage_running_tasks(futures, job_progress)
+
+    for future in all_futures:
+        exc = future.exception()
+        if exc is not None:
+            logging.error("Download worker failed: %s", exc, exc_info=exc)
