@@ -44,15 +44,13 @@ def add_random_delay(min_delay: float = 0.5, max_delay: float = 2.0) -> None:
 
 def prepare_cloudscraper_session() -> CloudScraper:
     """Create a cloudscraper session to mimic a Firefox browser on macOS."""
-    scraper = cloudscraper.create_scraper(
+    return cloudscraper.create_scraper(
         browser={
             "browser": "firefox",
             "platform": "darwin",  # macOS
             "desktop": True,
         },
     )
-
-    return scraper
 
 
 def fetch_page_cloudflare(url: str, timeout: int = 10) -> BeautifulSoup:

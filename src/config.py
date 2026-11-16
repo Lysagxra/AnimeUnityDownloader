@@ -57,6 +57,7 @@ LARGE_FILE_CHUNK_SIZE = 2 * MB
 # HTTP / Network
 # ============================
 # HTTP status codes
+HTTP_STATUS_OK = 200
 HTTP_STATUS_FORBIDDEN = 403
 
 # Minimum content length to check if text is too short or missing basic HTML tags

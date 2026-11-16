@@ -63,8 +63,10 @@ class Crawler:
         page_soup = soup if soup is not None else fetch_page_httpx(validate_url(url))
         self.host_domain = extract_host_domain(url)
         self.props = extract_inertia_props(page_soup)
+
         if "id" not in self.props.get("anime", {}):
             raise KeyError("id")
+
         self.start_episode = episodes_range[0]
         self.end_episode = episodes_range[1]
         self.episodes = episodes
@@ -138,17 +140,20 @@ class Crawler:
         if not videos:
             return None
 
-        visible = [v for v in videos if not v.get("is_hidden")] or videos
+        visible = [video for video in videos if not video.get("is_hidden")] or videos
         chosen = next(
-            (v for v in visible if str(v.get("language", "")).lower() == self.language),
+            (
+                video
+                for video in visible
+                if str(video.get("language", "")).lower() == self.language
+            ),
             visible[0],
         )
         return chosen.get("id")
 
     async def _get_episode_ids(self) -> list[tuple[int, str]]:
-        """Fetch all (episode_video_id, episode_number) pairs across paginated chunks."""
+        """Fetch pairs (episode_video_id, episode_number) across paginated chunks."""
         loaded = self.props.get("loadedEpisodes") or {}
-
         all_episode_infos: list[dict] = list(loaded.get("episodes") or [])
         seen_ids = {ep["id"] for ep in all_episode_infos if "id" in ep}
 
@@ -157,7 +162,6 @@ class Crawler:
         start = len(all_episode_infos) + 1
 
         while start <= self._get_num_episodes():
-
             response = await fetch_with_retries(
                 episode_api_url,
                 self.semaphore,
@@ -168,7 +172,9 @@ class Crawler:
                 break
 
             payload = response.json()
-            chunk = payload if isinstance(payload, list) else payload.get("episodes", [])
+            chunk = (
+                payload if isinstance(payload, list) else payload.get("episodes", [])
+            )
             if not chunk:
                 break
 
@@ -181,6 +187,7 @@ class Crawler:
 
             if added == 0:
                 break
+
             start += int(loaded.get("tab_size") or BATCH_SIZE)
 
         results: list[tuple[int, str]] = []
@@ -188,6 +195,7 @@ class Crawler:
             video_id = self._select_video_id(info)
             if video_id is not None:
                 results.append((video_id, str(info["number"])))
+
         return results
 
     async def _collect_episode_ids(self) -> list[tuple[int, str]]:
@@ -202,7 +210,9 @@ class Crawler:
             ]
 
         validate_episode_range(
-            self.start_episode, self.end_episode, self._get_num_episodes()
+            self.start_episode,
+            self.end_episode,
+            self._get_num_episodes(),
         )
 
         return [

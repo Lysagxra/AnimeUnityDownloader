@@ -21,7 +21,12 @@ from urllib.parse import urlparse
 import requests
 from rich.live import Live
 
-from src.config import DEFAULT_LANGUAGE, DOWNLOAD_QUALITIES, parse_arguments
+from src.config import (
+    DEFAULT_LANGUAGE,
+    DOWNLOAD_QUALITIES,
+    HTTP_STATUS_OK,
+    parse_arguments,
+)
 from src.crawler.crawler import Crawler
 from src.download_utils import (
     get_episode_filename,
@@ -46,18 +51,19 @@ def download_episode(
     retries: int = 4,
 ) -> None:
     """Download an episode from /episode-videos/{id}/download with quality fallback."""
+    parsed_download_link = urlparse(download_link)
+    headers = {
+        "Accept": (
+            "text/html,application/xhtml+xml,application/xml;q=0.9,video/mp4,*/*;q=0.8",
+        ),
+        "Referer": f"{parsed_download_link.scheme}://{parsed_download_link.netloc}/",
+    }
 
     for attempt in range(retries):
         try:
             scraper = prepare_cloudscraper_session()
-            headers = {
-                "Accept":
-                    "text/html,application/xhtml+xml,application/xml;q=0.9,video/mp4,*/*;q=0.8",
-                "Referer":
-                    f"{urlparse(download_link).scheme}://{urlparse(download_link).netloc}/",
-            }
-
             response = None
+
             for quality in DOWNLOAD_QUALITIES:
                 res = scraper.get(
                     f"{download_link}?quality={quality}",
@@ -66,10 +72,15 @@ def download_episode(
                     timeout=20,
                     allow_redirects=True,
                 )
+
                 content_type = res.headers.get("Content-Type", "").lower()
-                if res.status_code == 200 and "text/html" not in content_type:
+                if (
+                    res.status_code == HTTP_STATUS_OK
+                    and "text/html" not in content_type
+                ):
                     response = res
                     break
+
                 logging.warning(
                     "Episode %s (%sp) returned status %s (%s)",
                     episode_number,
@@ -80,9 +91,8 @@ def download_episode(
                 res.close()
 
             if response is None:
-                raise requests.RequestException(
-                    f"No valid MP4 stream found for episode {episode_number}"
-                )
+                msg = f"No valid MP4 stream found for episode {episode_number}"
+                raise requests.RequestException(msg)
 
         except requests.RequestException as req_err:
             logging.warning(
@@ -93,15 +103,19 @@ def download_episode(
                 req_err,
             )
             if attempt < retries - 1:
-                time.sleep(10 * (attempt + 1) + random.uniform(1, 2)) # noqa: S311
+                time.sleep(10 * (attempt + 1) + random.uniform(1, 2))  # noqa: S311
 
         else:
             with response:
-                filename = (
-                    get_episode_filename(download_link, response)
-                    or get_hls_episode_filename(download_path, episode_number)
+                filename = get_episode_filename(
+                    download_link,
+                    response,
+                ) or get_hls_episode_filename(download_path, episode_number)
+                save_file_with_progress(
+                    response,
+                    Path(download_path) / filename,
+                    task_info,
                 )
-                save_file_with_progress(response, Path(download_path) / filename, task_info)
             break
 
 
@@ -112,7 +126,9 @@ def get_hls_episode_filename(download_path: str, episode_number: str) -> str:
 
 
 def process_video_url(
-    episode: tuple[str, str | None], download_path: str, task_info: tuple,
+    episode: tuple[str, str | None],
+    download_path: str,
+    task_info: tuple,
 ) -> None:
     """Download an episode from its direct download endpoint."""
     episode_number, video_url = episode
@@ -124,7 +140,9 @@ def process_video_url(
 
 
 def download_anime(
-    anime_name: str, episodes: list[tuple[str, str | None]], download_path: str,
+    anime_name: str,
+    episodes: list[tuple[str, str | None]],
+    download_path: str,
 ) -> None:
     """Download episodes of a specified anime from provided video URLs."""
     job_progress = create_progress_bar()
