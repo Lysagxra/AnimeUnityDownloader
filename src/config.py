@@ -126,6 +126,12 @@ def add_common_arguments(parser: ArgumentParser) -> None:
         help="The directory where the downloaded content will be saved.",
     )
     parser.add_argument(
+        "--lang",
+        type=str,
+        default=DEFAULT_LANGUAGE,
+        help="Preferred audio language track (e.g., jpn, ita).",
+    )
+    parser.add_argument(
         "--version",
         action="version",
         version=get_version_string(),
@@ -163,12 +169,6 @@ def setup_parser(
                 "Specific episode numbers to download. "
                 "Example: --episodes 1,3,7,12 or --episodes 1 3 7 12"
             ),
-        )
-        parser.add_argument(
-            "--lang",
-            type=str,
-            default=DEFAULT_LANGUAGE,
-            help="Preferred audio language track (e.g., jpn, ita).",
         )
 
     add_common_arguments(parser)

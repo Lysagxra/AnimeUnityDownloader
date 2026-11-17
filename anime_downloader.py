@@ -197,6 +197,7 @@ async def main() -> None:
         episodes_range=(args.start, args.end),
         episodes=episodes,
         custom_path=args.custom_path,
+        language=args.lang,
     )
 
 

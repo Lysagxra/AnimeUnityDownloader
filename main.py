@@ -14,15 +14,19 @@ from __future__ import annotations
 import asyncio
 
 from anime_downloader import parse_arguments, process_anime_download
-from src.config import URLS_FILE
+from src.config import DEFAULT_LANGUAGE, URLS_FILE
 from src.file_utils import read_file, write_file
 from src.general_utils import clear_terminal
 
 
-async def process_urls(urls: list[str], custom_path: str | None = None) -> None:
+async def process_urls(
+    urls: list[str],
+    custom_path: str | None = None,
+    language: str = DEFAULT_LANGUAGE,
+) -> None:
     """Validate and downloads items for a list of URLs."""
     for url in urls:
-        await process_anime_download(url, custom_path=custom_path)
+        await process_anime_download(url, custom_path=custom_path, language=language)
 
 
 async def main() -> None:
@@ -33,7 +37,7 @@ async def main() -> None:
 
     # Read and process URLs, ignoring empty lines
     urls = [url.strip() for url in read_file(URLS_FILE) if url.strip()]
-    await process_urls(urls, custom_path=args.custom_path)
+    await process_urls(urls, custom_path=args.custom_path, language=args.lang)
 
     # Clear URLs file
     write_file(URLS_FILE)
